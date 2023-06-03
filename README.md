@@ -4,8 +4,6 @@ Code for training an active learning model for object detection using a Variatio
 
 This repository contains code for training an active learning model for object detection using a Variational Autoencoder (VAE). The model selects the most informative data for training using the VAE, which results in faster convergence and better accuracy. The code is implemented using Python and PyTorch.
 
-# REMOVE REST
-
 # SSD: Single Shot MultiBox Object Detector, in PyTorch
 A [PyTorch](http://pytorch.org/) implementation of [Single Shot MultiBox Detector](http://arxiv.org/abs/1512.02325) from the 2016 paper by Wei Liu, Dragomir Anguelov, Dumitru Erhan, Christian Szegedy, Scott Reed, Cheng-Yang, and Alexander C. Berg.  The official and original Caffe code can be found [here](https://github.com/weiliu89/caffe/tree/ssd).
 
