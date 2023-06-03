@@ -6,7 +6,7 @@ ROOT = os.path.expanduser("~")
 # concat /Research/Object Detection & Image Segmentation/repos/ssd.pytorch/ to HOME
 # to get /home/username/Research/Object Detection & Image Segmentation/repos/ssd.pytorch/
 # this is where the data will be downloaded to
-HOME = ROOT + '/Research/Object Detection & Image Segmentation/repos/ssd.pytorch/'
+HOME = os.getcwd()
 
 # for making bounding boxes pretty
 COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
