@@ -15,7 +15,6 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 from visdom import Visdom
-from device import default_device
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -38,9 +37,9 @@ parser.add_argument('--start_iter', default=0, type=int,
                     help='Resume training at this iter')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='Number of workers used in dataloading')
-parser.add_argument('--cuda', default=False, type=str2bool,
+parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning-rate', default=1e-6, type=float,
                     help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float,
                     help='Momentum value for optim')
@@ -50,6 +49,8 @@ parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')
 parser.add_argument('--visdom', default=False, type=str2bool,
                     help='Use visdom for loss visualization')
+parser.add_argument('--tensorboard', default=True, type=str2bool,
+                    help='Use tensorboard for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
 args = parser.parse_args()
@@ -95,6 +96,12 @@ def train():
     if args.visdom:
         import visdom
         viz = visdom.Visdom()
+
+    if args.tensorboard:
+        from datetime import datetime
+        from torch.utils.tensorboard import SummaryWriter
+        run_name = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
+        writer = SummaryWriter(os.path.join('runs', 'SSD', 'tensorboard', run_name))
 
     ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
     net = ssd_net
@@ -154,8 +161,8 @@ def train():
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
-            update_vis_plot(epoch, loc_loss, conf_loss, epoch_plot, None,
-                            'append', epoch_size)
+            update_vis_plot(epoch, loc_loss, conf_loss, iter_plot, epoch_plot,
+                            'append', viz, epoch_size=epoch_size)
             # reset epoch loss counters
             loc_loss = 0
             conf_loss = 0
@@ -188,20 +195,25 @@ def train():
         loss.backward()
         optimizer.step()
         t1 = time.time()
-        loc_loss += loss_l.item()
-        conf_loss += loss_c.item()
+        loc_loss += loss_l.data
+        conf_loss += loss_c.data
 
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.item()), end=' ')
+            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data), end=' ')
 
         if args.visdom:
-            update_vis_plot(iteration, loss_l.item(), loss_c.item(),
+            update_vis_plot(iteration, loss_l.data, loss_c.data,
                             iter_plot, epoch_plot, 'append', viz)
+            
+        if args.tensorboard:
+            writer.add_scalar('losses/loc_loss', loss_l.data, iteration)
+            writer.add_scalar('losses/conf_loss', loss_c.data, iteration)
+            writer.add_scalar('losses/total_loss', loss.data, iteration)
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_COCO_' +
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_' + args.dataset + '_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
@@ -259,10 +271,5 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type, viz, ep
 
 
 if __name__ == '__main__':
-    # default device overrides torch.device for GPU acceleration.
-    # if you are using M1 or M2 machines this will be necessary to use GPU acceleration.
-    # note that you have to set the default value of args.cuda = False in order to use backends.mps
-    default_device()
-
     # training loop
     train()

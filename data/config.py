@@ -1,11 +1,9 @@
 # config.py
 import os.path
+from pathlib import Path
 
 # gets home dir cross platform
 ROOT = os.path.expanduser("~")
-# concat /Research/Object Detection & Image Segmentation/repos/ssd.pytorch/ to HOME
-# to get /home/username/Research/Object Detection & Image Segmentation/repos/ssd.pytorch/
-# this is where the data will be downloaded to
 HOME = os.getcwd()
 
 # for making bounding boxes pretty
