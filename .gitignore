@@ -133,3 +133,6 @@ data/coco/
 
 # visdom and mps test
 test/
+
+# tensorboard
+runs/

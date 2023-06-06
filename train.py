@@ -35,6 +35,8 @@ parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--start_iter', default=0, type=int,
                     help='Resume training at this iter')
+parser.add_argument('--j1', default=True,
+                    help='Train on J1 images')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
@@ -90,8 +92,7 @@ def train():
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
         dataset = VOCDetection(root=args.dataset_root,
-                               transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
+                                transform=SSDAugmentation(cfg['min_dim'], MEANS), j1=True)
 
     if args.visdom:
         import visdom
@@ -142,6 +143,7 @@ def train():
 
     epoch_size = len(dataset) // args.batch_size
     print('Training SSD on:', dataset.name)
+    print('Dataset size:', len(dataset))
     print('Using the specified args:')
     print(args)
 
@@ -215,6 +217,12 @@ def train():
             print('Saving state, iter:', iteration)
             torch.save(ssd_net.state_dict(), 'weights/ssd300_' + args.dataset + '_' +
                        repr(iteration) + '.pth')
+            
+            if args.j1:
+                print('Saving state for j1 images, iter:', iteration)
+                torch.save(ssd_net.state_dict(), 'weights/ssd300_j1_' + args.dataset + '_' +
+                       repr(iteration) + '.pth')
+
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
