@@ -415,3 +415,14 @@ class SSDAugmentation(object):
 
     def __call__(self, img, boxes, labels):
         return self.augment(img, boxes, labels)
+
+
+class VAEAugmentation(object):
+    def __init__(self, size=300):
+        self.size = size
+        self.augment = Compose([
+            Resize(self.size),
+        ])
+
+    def __call__(self, img, boxes, labels):
+        return self.augment(img, boxes, labels)
