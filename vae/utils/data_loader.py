@@ -5,12 +5,11 @@ from pathlib import Path
 import torchvision
 from torchvision.transforms import Compose, Resize, ToTensor, ToPILImage
 from torch.utils.data import DataLoader, Dataset
-import xml.etree.ElementTree as ET
 
 # Constants
-IMG_SIZE = 256      # Image Width
+IMG_SIZE = 300      # Image Width
 IMG_CHANNELS = 3    # Image Channels
-IMG_COUNT = 5000    # Number of images to select from the dataset
+IMG_COUNT = 100    # Number of images to select from the dataset
 
 
 class CoCoDataset(Dataset):
@@ -86,8 +85,12 @@ def load_data(train_dirs: List[str], valid_dirs: List[str], batch_size: int, dat
     print(f"Loaded {len(valid_files)} validation images.")
 
     # Limit the dataset image counts
-    train_files = train_files[:IMG_COUNT]
-    valid_files = valid_files[:IMG_COUNT]
+    if IMG_COUNT:
+        train_files = train_files[:IMG_COUNT]
+        valid_files = valid_files[:IMG_COUNT]
+        print(f"Selecting only {IMG_COUNT} images.")
+    else:
+        print("Selecting all the images.")
 
     # Use custom dataset loader
     train_dataset = dataset(train_files)

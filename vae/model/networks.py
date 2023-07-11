@@ -17,7 +17,7 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 print(f"Running on '{DEVICE}'")
 
 # Constants
-KL_ALPHA = 10
+KL_ALPHA = 1
 LATENT_DIM = 256
 EPOCHS = 12
 LEARNING_RATE = 1e-3

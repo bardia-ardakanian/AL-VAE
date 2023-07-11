@@ -191,6 +191,10 @@ def train():
             print('timer: %.4f sec.' % (t1 - t0))
             print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (_loss), end=' ')
 
+        if _loss is None:
+            print("Overfitting... Exitting.")
+            break
+
         if args.visdom:
             update_vis_plot(iteration, loss_kl, loss_mse,
                             iter_plot, epoch_plot, 'append', viz)

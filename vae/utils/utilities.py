@@ -76,10 +76,10 @@ def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool
         if i == n // 2:
             ax.set_title('Reconstructed images')
 
-    # plt.tight_layout()
     if save_only:
         plt.savefig('results/recon.png' if not filename else filename, bbox_inches='tight')
     else:
+        plt.tight_layout()
         plt.show()
 
 
@@ -176,8 +176,8 @@ def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: 
             plt.imshow(rec_img.cpu().squeeze().permute(1, 2, 0).numpy())
             ax.set_title(f'{psnr:0.2f}')
 
-    # plt.tight_layout()
     if save_only:
         plt.savefig('results/recon_random.png' if not filename else filename, bbox_inches='tight')
     else:
+        plt.tight_layout()
         plt.show()

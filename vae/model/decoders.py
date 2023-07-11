@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from typing import Optional
 
 
 class Decoder(nn.Module):
@@ -19,19 +18,19 @@ class Decoder(nn.Module):
 
         self.model_2 = nn.Sequential(
             # Convolution layer 1
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(64, 32, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 2
-            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(32, 16, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 3
-            nn.ConvTranspose2d(16, 8, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(16, 8, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(8),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 4
-            nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=0),
         )
 
 
@@ -60,19 +59,19 @@ class SkipDecoder(nn.Module):
 
         self.model_2 = nn.Sequential(
             # Convolution layer 1
-            nn.ConvTranspose2d(128, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(128, 32, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 2
-            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(32, 16, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 3
-            nn.ConvTranspose2d(16, 8, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(16, 8, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(8),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 4
-            nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=0),
         )
 
 

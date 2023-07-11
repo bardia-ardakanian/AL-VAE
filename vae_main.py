@@ -31,7 +31,7 @@ if __name__ == '__main__':
     )
 
     # VOC
-    vae = VAE(False)
+    vae = VAE(True)
     train_loss, val_loss = vae.train(train_loader, train_dataset, valid_loader, EPOCHS)
 
     # Plot metrics

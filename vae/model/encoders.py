@@ -12,22 +12,22 @@ class Encoder(nn.Module):
 
         self.model = nn.Sequential(
             # Convolution layer 1
-            nn.Conv2d(3, 8, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(3, 8, kernel_size=5, stride=2, padding=0),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 2
-            nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(8, 16, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 3
-            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 4
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=0),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Linear layer 1
             nn.Flatten(),
-            nn.Linear(16384, 64 * 16 * 16),
+            nn.Linear(14400, 64 * 16 * 16),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
         )
 
@@ -68,18 +68,18 @@ class SkipEncoder(nn.Module):
 
         self.model_1 = nn.Sequential(
             # Convolution layer 1
-            nn.Conv2d(3, 8, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(3, 8, kernel_size=5, stride=2, padding=0),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 2
-            nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(8, 16, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 3
-            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
             # Convolution layer 4
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=1),
             nn.LeakyReLU(negative_slope=0.01, inplace=False),
         )
 
