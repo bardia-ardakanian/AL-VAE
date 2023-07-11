@@ -33,7 +33,7 @@ def plot_metrics(train_loss: List[float], val_loss: List[float]) -> None:
     plt.show()
 
 
-def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool = False) -> None:
+def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool = False, filename: str = None) -> None:
     """
         Plot the original and reconstructed images
 
@@ -55,7 +55,7 @@ def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool
 
         # Reconstruct the image using the encoder and decoder
         with torch.no_grad():
-            rec_img = model(img)
+            rec_img = model(img.float())
 
         # Plot original images
         plt.imshow(img.cpu().squeeze().permute(1, 2, 0).numpy())
@@ -74,7 +74,7 @@ def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool
 
     plt.tight_layout()
     if save_only:
-        plt.savefig('results/image.png', bbox_inches='tight')
+        plt.savefig('results/image.png' if not filename else filename, bbox_inches='tight')
     else:
         plt.show()
 
@@ -126,7 +126,7 @@ def gauss_noise_tensor(img):
     return out
 
 
-def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: int = 5, save_only: bool = False) -> None:
+def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: int = 5, save_only: bool = False, filename: str = None) -> None:
     """
         Plot the original and randomly reconstructed images
 
@@ -149,7 +149,7 @@ def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: 
         # Plot the original image
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)  
-        plt.imshow(img.cpu().squeeze().permute(1, 2, 0).numpy().astype(np.uint8))
+        plt.imshow(img.cpu().squeeze().permute(1, 2, 0).numpy())
         ax.set_title('Original')
 
         H_img = img.cpu().squeeze().permute(1, 2, 0).numpy()
@@ -159,7 +159,7 @@ def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: 
             # Reconstruct the image using the encoder and decoder
             with torch.no_grad():
                 noise = torch.randn_like(img) * 0 # Add noise
-                rec_img = model(img + noise, is_inference = True)
+                rec_img = model(img.float() + noise, is_inference = True)
 
             # Calculate PSNR
             E_img = rec_img.cpu().squeeze().permute(1, 2, 0).numpy()
@@ -169,11 +169,11 @@ def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: 
             ax = plt.subplot(n, times+1, (i * (times + 1)) + j + 2)
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)  
-            plt.imshow(rec_img.cpu().squeeze().permute(1, 2, 0).numpy().astype(np.uint8))
+            plt.imshow(rec_img.cpu().squeeze().permute(1, 2, 0).numpy())
             ax.set_title(f'{psnr:0.2f}')
 
     plt.tight_layout()
     if save_only:
-        plt.savefig('results/image.png', bbox_inches='tight')
+        plt.savefig('results/image.png' if not filename else filename, bbox_inches='tight')
     else:
         plt.show()

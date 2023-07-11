@@ -1,8 +1,8 @@
 import torch
 
 # Third-party imports
-from vae.utils.data_loader import load_data, VOCDataset, CoCoDataset
 from vae.utils.utilities import plot_metrics, plot_random_reconstructions
+from vae.utils.data_loader import load_data, VOCDataset, CoCoDataset
 from vae.model.networks import VAE
 
 # Random seed for reproducible results

@@ -1,14 +1,16 @@
 import torch
+import cv2
 from typing import List
 from pathlib import Path
 import torchvision
-from torchvision.transforms import Compose, Resize
+from torchvision.transforms import Compose, Resize, ToTensor, ToPILImage
 from torch.utils.data import DataLoader, Dataset
+import xml.etree.ElementTree as ET
 
 # Constants
 IMG_SIZE = 256      # Image Width
 IMG_CHANNELS = 3    # Image Channels
-IMG_COUNT = 50    # Number of images to select from the dataset
+IMG_COUNT = 5000    # Number of images to select from the dataset
 
 
 class CoCoDataset(Dataset):
@@ -17,8 +19,9 @@ class CoCoDataset(Dataset):
         """ Reads a list of image paths and defines transformations """
         self.files = files
         self.transformations = Compose([
-            # Resize((IMG_SIZE, IMG_SIZE), antialias=False)
-            Resize((IMG_SIZE, IMG_SIZE))
+            ToPILImage("RGB"),
+            Resize((IMG_SIZE, IMG_SIZE)),
+            ToTensor(),
         ])
 
 
@@ -35,7 +38,7 @@ class CoCoDataset(Dataset):
         if img.shape[0] == 1:
             img = torch.cat([img] * 3)
 
-        return img / 255.0
+        return img
 
 
 
@@ -45,8 +48,9 @@ class VOCDataset(Dataset):
         """ Reads a list of image paths and defines transformations """
         self.files = files
         self.transformations = Compose([
-            # Resize((IMG_SIZE, IMG_SIZE), antialias=False)
-            Resize((IMG_SIZE, IMG_SIZE))
+            ToPILImage("RGB"),
+            Resize((IMG_SIZE, IMG_SIZE)),
+            ToTensor(),
         ])
 
 
@@ -57,13 +61,13 @@ class VOCDataset(Dataset):
 
     def __getitem__(self, i: int):
         """ Reads and returns and image """
-        img = torchvision.io.read_image(self.files[i])  # Load the image file
-        img = self.transformations(img)                 # Apply transformations
+        img = cv2.imread(self.files[i])
+        img = self.transformations(img)
 
         if img.shape[0] == 1:
             img = torch.cat([img] * 3)
 
-        return img / 255.0
+        return img
 
 
 

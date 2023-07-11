@@ -19,7 +19,7 @@ class Decoder(nn.Module):
 
         self.model_2 = nn.Sequential(
             # Convolution layer 1
-            nn.ConvTranspose2d(128, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
             # Convolution layer 2

@@ -2,6 +2,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+# Select device (CPU/GPU)
+DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+print(f"Running on '{DEVICE}'")
+
 
 class VAELoss(nn.Module):
 

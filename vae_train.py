@@ -80,7 +80,7 @@ def train():
         cfg = coco
         dataset = COCODetection(
             root = args.dataset_root,
-            transform = VAEAugmentation(size = cfg['min_dim'])
+            transform = VAEAugmentation(size = 256)
         )
 
     elif args.dataset == 'VOC':
@@ -89,7 +89,7 @@ def train():
         cfg = voc
         dataset = VOCDetection(
             root = args.dataset_root,
-            transform = VAEAugmentation(size = cfg['min_dim'])
+            transform = VAEAugmentation(size = 256)
         )
 
     if args.visdom:
@@ -98,24 +98,19 @@ def train():
 
     if args.tensorboard:
         from datetime import datetime
-        from torch.utils.tensorboard import SummaryWriter
+        # from torch.utils.tensorboard import SummaryWriter
         run_name = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
-        writer = SummaryWriter(os.path.join('runs', 'VAE', 'tensorboard', run_name))
+        # writer = SummaryWriter(os.path.join('runs', 'VAE', 'tensorboard', run_name))
 
-    vae = VAE(has_skip = False)
-
-    if args.cuda:
-        net = torch.nn.DataParallel(vae)
-        cudnn.benchmark = True
+    vae = VAE(has_skip = True)
 
     if args.resume:
         print('Resuming training, loading {}...'.format(args.resume))
         vae.load_weights(args.resume)
 
-    if args.cuda:
-        net = net.cuda()
+    # if args.cuda:
+    #     vae.model = vae.model.cuda()
 
-    net.train()
     # loss counters
     loss = 0
     loss_kl = 0
@@ -129,8 +124,6 @@ def train():
     print('Using the specified args:')
     print(args)
 
-    step_index = 0
-
     if args.visdom:
         vis_title = 'VAE.PyTorch on ' + dataset.name
         vis_legend = ['KL Loss', 'MSE Loss', 'Total Loss']
@@ -141,7 +134,14 @@ def train():
                                   num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate,
                                   pin_memory=True)
-
+    from vae.utils.data_loader import load_data, VOCDataset
+    train_dataset, data_loader, valid_dataset, valid_loader = load_data(
+        train_dir = "data\VOCdevkit\VOC2012\JPEGImages",
+        valid_dir = "data\VOCdevkit\VOC2007\JPEGImages",
+        batch_size = 32,
+        dataset = VOCDataset
+    )
+    dataset = train_dataset
     # create batch iterator
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
@@ -155,17 +155,21 @@ def train():
 
         # load train data
         try:
-            images, targets = next(batch_iterator)
+            # images, targets = next(batch_iterator)
+            images = next(batch_iterator)
         except:
             batch_iterator = iter(data_loader)
-            images, targets = next(batch_iterator)
+            # images, targets = next(batch_iterator)
+            images = next(batch_iterator)
 
         if args.cuda:
-            images = Variable(images.cuda())
-            targets = [Variable(ann.cuda(), volatile=True) for ann in targets]
-        else:
+            # images = Variable(images.cuda())
             images = Variable(images)
-            targets = [Variable(ann, volatile=True) for ann in targets]
+            # targets = [Variable(ann.cuda(), volatile=True) for ann in targets]
+        else:
+            # images = Variable(images)
+            images = Variable(images)
+            # targets = [Variable(ann, volatile=True) for ann in targets]
 
         # Train on batch
         t0 = time.time()
@@ -176,18 +180,23 @@ def train():
         loss_kl += _loss_kl
         loss_mse += _loss_mse
 
+        if iteration != 0 and iteration % 500 == 0:
+            from vae.utils.utilities import plot_reconstruction, plot_random_reconstructions
+            plot_reconstruction(vae.model, dataset, save_only=True, filename=f"results/recon_{iteration}.jpg")
+            plot_random_reconstructions(vae.model, dataset, save_only=True, filename=f"results/recon_random_{iteration}.jpg")
+
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data), end=' ')
+            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (_loss), end=' ')
 
         if args.visdom:
             update_vis_plot(iteration, loss_kl, loss_mse,
                             iter_plot, epoch_plot, 'append', viz)
 
-        if args.tensorboard:
-            writer.add_scalar('losses/kl_loss', loss_kl, iteration)
-            writer.add_scalar('losses/mse_loss', loss_mse, iteration)
-            writer.add_scalar('losses/total_loss', loss, iteration)
+        # if args.tensorboard:
+        #     writer.add_scalar('losses/kl_loss', loss_kl, iteration)
+        #     writer.add_scalar('losses/mse_loss', loss_mse, iteration)
+        #     writer.add_scalar('losses/total_loss', loss, iteration)
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
