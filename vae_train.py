@@ -8,7 +8,10 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data as data
 import argparse
 from visdom import Visdom
+
+# VAE
 from vae.model.networks import VAE
+from vae.utils.utilities import plot_reconstruction, plot_random_reconstructions, plot_metrics
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -136,8 +139,8 @@ def train():
                                   pin_memory=True)
     from vae.utils.data_loader import load_data, VOCDataset
     train_dataset, data_loader, valid_dataset, valid_loader = load_data(
-        train_dir = "data\VOCdevkit\VOC2012\JPEGImages",
-        valid_dir = "data\VOCdevkit\VOC2007\JPEGImages",
+        train_dirs = ["data\VOCdevkit\VOC2012\JPEGImages", "data\VOCdevkit\VOC2007\JPEGImages"],
+        valid_dirs = ["data\VOCdevkit\VOC2007\JPEGImages"],
         batch_size = 32,
         dataset = VOCDataset
     )
@@ -180,10 +183,9 @@ def train():
         loss_kl += _loss_kl
         loss_mse += _loss_mse
 
-        if iteration != 0 and iteration % 500 == 0:
-            from vae.utils.utilities import plot_reconstruction, plot_random_reconstructions
-            plot_reconstruction(vae.model, dataset, save_only=True, filename=f"results/recon_{iteration}.jpg")
+        if iteration != 0 and iteration % 50 == 0:
             plot_random_reconstructions(vae.model, dataset, save_only=True, filename=f"results/recon_random_{iteration}.jpg")
+            plot_reconstruction(vae.model, dataset, save_only=True, filename=f"results/recon_{iteration}.jpg")
 
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))

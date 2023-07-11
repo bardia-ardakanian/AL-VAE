@@ -24,8 +24,8 @@ if __name__ == '__main__':
 
     # Load VOC data
     train_dataset, train_loader, valid_dataset, valid_loader = load_data(
-        train_dir = VOC_TRAIN_DIR,
-        valid_dir = VOC_VALID_DIR,
+        train_dirs = [VOC_TRAIN_DIR],
+        valid_dirs = [VOC_VALID_DIR],
         batch_size = BATCH_SIZE,
         dataset = VOCDataset
     )

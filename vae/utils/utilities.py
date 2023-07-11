@@ -12,7 +12,7 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 print(f"Running on '{DEVICE}'")
 
 
-def plot_metrics(train_loss: List[float], val_loss: List[float]) -> None:
+def plot_metrics(train_loss: List[float], val_loss: List[float], save_only: bool = False, filename: str = None) -> None:
     """
         Plots the metrics
         
@@ -30,7 +30,11 @@ def plot_metrics(train_loss: List[float], val_loss: List[float]) -> None:
     plt.ylabel("Loss")
     plt.xticks(range(len(train_loss)))
     plt.legend()
-    plt.show()
+
+    if save_only:
+        plt.savefig('results/metrics.png' if not filename else filename, bbox_inches='tight')
+    else:
+        plt.show()
 
 
 def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool = False, filename: str = None) -> None:
@@ -72,9 +76,9 @@ def plot_reconstruction(model, dataset: CoCoDataset, n: int = 5, save_only: bool
         if i == n // 2:
             ax.set_title('Reconstructed images')
 
-    plt.tight_layout()
+    # plt.tight_layout()
     if save_only:
-        plt.savefig('results/image.png' if not filename else filename, bbox_inches='tight')
+        plt.savefig('results/recon.png' if not filename else filename, bbox_inches='tight')
     else:
         plt.show()
 
@@ -172,8 +176,8 @@ def plot_random_reconstructions(model, dataset: CoCoDataset, n: int = 3, times: 
             plt.imshow(rec_img.cpu().squeeze().permute(1, 2, 0).numpy())
             ax.set_title(f'{psnr:0.2f}')
 
-    plt.tight_layout()
+    # plt.tight_layout()
     if save_only:
-        plt.savefig('results/image.png' if not filename else filename, bbox_inches='tight')
+        plt.savefig('results/recon_random.png' if not filename else filename, bbox_inches='tight')
     else:
         plt.show()

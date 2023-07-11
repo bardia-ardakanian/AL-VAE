@@ -71,11 +71,18 @@ class VOCDataset(Dataset):
 
 
 
-def load_data(train_dir: str, valid_dir: str, batch_size: int, dataset: Dataset):
+def load_data(train_dirs: List[str], valid_dirs: List[str], batch_size: int, dataset: Dataset):
 
-    train_files = [str(file) for file in Path(train_dir).glob("*.jpg")]
+    # Load training data
+    train_files = []
+    for dir in train_dirs:
+        train_files.extend([str(file) for file in Path(dir).glob("*.jpg")])
     print(f"Loaded {len(train_files)} training images.")
-    valid_files = [str(file) for file in Path(valid_dir).glob("*.jpg")]
+
+    # Load validation data
+    valid_files = []
+    for dir in valid_dirs:
+        valid_files.extend([str(file) for file in Path(dir).glob("*.jpg")])
     print(f"Loaded {len(valid_files)} validation images.")
 
     # Limit the dataset image counts
