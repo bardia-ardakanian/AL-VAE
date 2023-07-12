@@ -15,7 +15,6 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 from visdom import Visdom
-from vae import *
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -24,7 +23,7 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='COCO', choices=['VOC', 'COCO'],
+parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
                     type=str, help='VOC or COCO')
 parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
@@ -112,21 +111,6 @@ def train():
         net = torch.nn.DataParallel(ssd_net)
         cudnn.benchmark = True
 
-    # Define VAE model
-    vae = VariationalAutoencoder()
-    _ = vae.to(DEVICE)
-
-    # Define VAE loss function
-    vae_loss = VAELoss(KL_ALPHA)
-    _ = vae_loss.to(DEVICE)
-
-    # Defien VAE optimizer
-    vae_optimizer = torch.optim.Adam(
-        vae.parameters(),
-        lr = LEARNING_RATE,
-        weight_decay = WEIGHT_DECAY
-    )
-
     if args.resume:
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
@@ -205,15 +189,7 @@ def train():
             targets = [Variable(ann, volatile=True) for ann in targets]
         # forward
         t0 = time.time()
-        vae_images = vae(images)
-        out = net(vae_images)
-
-        _loss, kl, mse = vae_loss(images, vae_images, vae.encoder.mean, vae.encoder.logvar)
-        vae_optimizer.zero_grad()
-        _loss.backward()
-        torch.nn.utils.clip_grad_norm_(vae.parameters(), 5)
-        vae_optimizer.step()
-
+        out = net(images)
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, targets)
