@@ -14,7 +14,7 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
-from visdom import Visdom
+# from visdom import Visdom
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -35,8 +35,8 @@ parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--start_iter', default=0, type=int,
                     help='Resume training at this iter')
-parser.add_argument('--j1', default=True,
-                    help='Train on J1 images')
+parser.add_argument('--sample', default=False,
+                    help='Train on 1000 image sample images')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
@@ -73,8 +73,6 @@ if not os.path.exists(args.save_folder):
 
 
 def train():
-    if args.visdom == True:
-        viz = Visdom()
 
     if args.dataset == 'COCO':
         if args.dataset_root == VOC_ROOT:
@@ -84,19 +82,32 @@ def train():
                   "--dataset_root was not specified.")
             args.dataset_root = COCO_ROOT
         cfg = coco
+
         dataset = COCODetection(root=args.dataset_root,
-                                transform=SSDAugmentation(cfg['min_dim'],
-                                                          MEANS))
+                                transform=SSDAugmentation(cfg['min_dim'], MEANS))
+
+        # if not args.sample:
+        #     dataset = COCODetection(root=args.dataset_root,
+        #                             transform=SSDAugmentation(cfg['min_dim'], MEANS))
+        # else:
+        #     dataset = COCODetection(root=args.dataset_root,
+        #                             transform=SSDAugmentation(cfg['min_dim'], MEANS))
+
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
-        dataset = VOCDetection(root=args.dataset_root,
-                                transform=SSDAugmentation(cfg['min_dim'], MEANS), j1=True)
 
-    if args.visdom:
-        import visdom
-        viz = visdom.Visdom()
+        if not args.sample:
+            dataset = VOCDetection(root=args.dataset_root,
+                                    transform=SSDAugmentation(cfg['min_dim'], MEANS))
+        else:
+            dataset = VOCDetection(root=args.dataset_root,
+                                   transform=SSDAugmentation(cfg['min_dim'], MEANS), sample=True)
+
+    # if args.visdom:
+    #     viz = None
+    #     viz = visdom.Visdom()
 
     if args.tensorboard:
         from datetime import datetime
@@ -140,7 +151,6 @@ def train():
     conf_loss = 0
     epoch = 0
     print('Loading the dataset...')
-
     epoch_size = len(dataset) // args.batch_size
     print('Training SSD on:', dataset.name)
     print('Dataset size:', len(dataset))
@@ -149,11 +159,11 @@ def train():
 
     step_index = 0
 
-    if args.visdom:
-        vis_title = 'SSD.PyTorch on ' + dataset.name
-        vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
-        iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend, viz)
-        epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend, viz)
+    # if args.visdom:
+    #     vis_title = 'SSD.PyTorch on ' + dataset.name
+    #     vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
+    #     iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend, viz)
+    #     epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend, viz)
 
     data_loader = data.DataLoader(dataset, args.batch_size,
                                   num_workers=args.num_workers,
@@ -162,13 +172,13 @@ def train():
     # create batch iterator
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
-        if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
-            update_vis_plot(epoch, loc_loss, conf_loss, iter_plot, epoch_plot,
-                            'append', viz, epoch_size=epoch_size)
-            # reset epoch loss counters
-            loc_loss = 0
-            conf_loss = 0
-            epoch += 1
+        # if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
+        #     update_vis_plot(epoch, loc_loss, conf_loss, iter_plot, epoch_plot,
+        #                     'append', viz, epoch_size=epoch_size)
+        #     # reset epoch loss counters
+        #     loc_loss = 0
+        #     conf_loss = 0
+        #     epoch += 1
 
         if iteration in cfg['lr_steps']:
             step_index += 1
@@ -204,9 +214,9 @@ def train():
             print('timer: %.4f sec.' % (t1 - t0))
             print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data), end=' ')
 
-        if args.visdom:
-            update_vis_plot(iteration, loss_l.data, loss_c.data,
-                            iter_plot, epoch_plot, 'append', viz)
+        # if args.visdom:
+        #     update_vis_plot(iteration, loss_l.data, loss_c.data,
+        #                     iter_plot, epoch_plot, 'append', viz)
             
         if args.tensorboard:
             writer.add_scalar('losses/loc_loss', loss_l.data, iteration)
@@ -218,10 +228,10 @@ def train():
             torch.save(ssd_net.state_dict(), 'weights/ssd300_' + args.dataset + '_' +
                        repr(iteration) + '.pth')
             
-            if args.j1:
-                print('Saving state for j1 images, iter:', iteration)
-                torch.save(ssd_net.state_dict(), 'weights/ssd300_j1_' + args.dataset + '_' +
-                       repr(iteration) + '.pth')
+            # if args.j1:
+            #     print('Saving state for j1 images, iter:', iteration)
+            #     torch.save(ssd_net.state_dict(), 'weights/ssd300_j1_' + args.dataset + '_' +
+            #            repr(iteration) + '.pth')
 
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')

@@ -2,7 +2,7 @@
 import os.path
 from pathlib import Path
 
-# gets home dir cross platform
+# gets home dir cross-platform
 ROOT = os.path.expanduser("~")
 HOME = os.getcwd()
 
