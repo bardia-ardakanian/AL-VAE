@@ -17,7 +17,7 @@ VOC_VALID_DIR: str = 'data/VOCdevkit/VOC2007/JPEGImages'
 
 
 if __name__ == '__main__':
-    os.makedirs('results/vae')
+    os.makedirs('results/vae', exist_ok = True)
 
     # Load data
     train_dataset, train_loader, valid_dataset, valid_loader = load_data(
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         train_loader = train_loader,
         valid_loader = valid_loader,
         checkpoints = False,
-        only_save_plots = True
+        only_save_plots = True,
     )
 
     # Plot metrics

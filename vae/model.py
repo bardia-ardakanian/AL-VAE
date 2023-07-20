@@ -61,30 +61,20 @@ class VAECore(nn.Module):
         self.encoder_2 = nn.Sequential(
             nn.Flatten(),
             nn.Linear(16384, 64 * 16 * 16),
-            nn.LeakyReLU(0.01, False),
+            nn.LeakyReLU(leaky_relu_ns, False),
         )
 
         # Reparameterization layers
-        # self.mean_layer = nn.Linear(64 * 16 * 16, latent_dim)
-        self.mean_layer = nn.Sequential(
-            nn.Linear(64 * 16 * 16, 64 * 4 * 4),
-            nn.LeakyReLU(leaky_relu_ns, False),
-            nn.Linear(64 * 4 * 4, latent_dim)
-        )
-        # self.logvar_layer = nn.Linear(64 * 16 * 16, latent_dim)
-        self.logvar_layer = nn.Sequential(
-            nn.Linear(64 * 16 * 16, 64 * 4 * 4),
-            nn.LeakyReLU(leaky_relu_ns, False),
-            nn.Linear(64 * 4 * 4, latent_dim)
-        )
+        self.mean_layer = nn.Linear(64 * 16 * 16, latent_dim)
+        self.logvar_layer = nn.Linear(64 * 16 * 16, latent_dim)
 
         # Decoder layers
         self.decoder_1 = nn.Sequential(
             # Linear layer 1
-            nn.Linear(latent_dim, 64 * 4 * 4),
+            nn.Linear(latent_dim, latent_dim * 4),
             nn.LeakyReLU(leaky_relu_ns, True),
             # Linear layer 2
-            nn.Linear(64 * 4 * 4, 64 * 16 * 16),
+            nn.Linear(latent_dim * 4, 64 * 16 * 16),
             nn.LeakyReLU(leaky_relu_ns, True),
         )
         self.decoder_2 = nn.Sequential(
@@ -374,13 +364,7 @@ class VAE(object):
                 mse / len(dataloader.dataset),
 
 
-    def train_valid(self,
-                    epochs: int,
-                    train_loader: Optional[DataLoader] = None,
-                    valid_loader: Optional[DataLoader] = None,
-                    checkpoints: bool = False,
-                    only_save_plots: bool = True,
-                    ) -> Tuple[list, list]:
+    def train_valid(self, epochs: int, train_loader: Optional[DataLoader] = None, valid_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True) -> Tuple[list, list]:
         """
             Trains and evaluates the model
 
@@ -419,7 +403,7 @@ class VAE(object):
                     dataset = train_loader.dataset,
                     n = 7,
                     device = self.device,
-                    filename = f"results/vae/recon_{epoch}.jpg" if only_save_plots else None
+                    filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
                 )
                 if epoch % 5 == 0:
                     # Plot random reconstruction of validation data
@@ -429,14 +413,14 @@ class VAE(object):
                         n = 3,
                         times = 5,
                         device = self.device,
-                        filename = f"results/vae/recon_{epoch}_random.jpg" if only_save_plots else None
+                        filename = f"results/vae/recon_{epoch}_random.jpg" if not only_save_plots else None
                     )
                 if epoch % 10 == 0:
                     # Plot metrics
                     plot_metrics(
                         train_losses = train_losses,
                         valid_losses = valid_losses,
-                        filename = f"results/vae/metrics{epoch}.jpg" if only_save_plots else None
+                        filename = f"results/vae/metrics{epoch}.jpg" if not only_save_plots else None
                     )
 
             # Checkpoint
