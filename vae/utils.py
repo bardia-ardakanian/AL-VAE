@@ -63,7 +63,7 @@ def load_data(
         num_images: int = 10000,
         image_size: int = 256,
         num_workers: int = 2
-        ) -> Tuple[Dataset, DataLoader, Dataset, DataLoader]:
+        ) -> Tuple[DataLoader, DataLoader]:
     """
         Loads the data
 
@@ -74,7 +74,7 @@ def load_data(
             num_images (int): Number of images to load select for the dataset
             num_workers (int): Number of workers to use
         Returns:
-            (Tuple[Dataset, DataLoader, Dataset, DataLoader]): train_dataset, train_loader, valid_dataset, valid_loader
+            (Tuple[DataLoader, DataLoader]): training and validation loaders
     """
     def _(dirs: List[str]):
         files = []
@@ -88,11 +88,11 @@ def load_data(
             num_workers = num_workers,              # Number of processes to use for loading the data
             pin_memory = True,                      # avoid one implicit CPU-to-CPU copy
         )
-        return dataset, loader
+        return loader
 
-    train_dataset, train_loader = _(train_dirs)     # Load training data
-    test_dataset, test_loader = _(test_dirs)        # Load testing data
-    return train_dataset, train_loader, test_dataset, test_loader
+    train_loader = _(train_dirs)     # Load training data
+    test_loader = _(test_dirs)        # Load testing data
+    return train_loader, test_loader
 
 
 def plot_metrics(train_losses: List[float], valid_losses: List[float], filename: str = None) -> None:
@@ -108,8 +108,8 @@ def plot_metrics(train_losses: List[float], valid_losses: List[float], filename:
     """
     plt.figure(figsize = (20, 5))
     plt.title("Training and Validation Loss")
-    plt.plot([loss.item() for loss in train_losses], label = "training")
-    plt.plot([loss.item() for loss in valid_losses], label = "validation")
+    plt.plot([loss.item() for loss in train_losses[1:]], label = "training")
+    plt.plot([loss.item() for loss in valid_losses[1:]], label = "validation")
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.xticks(range(len(train_losses)))

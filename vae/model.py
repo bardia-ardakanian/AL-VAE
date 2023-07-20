@@ -312,7 +312,7 @@ class VAE(object):
                 (Tuple[float, float, float]): Training losses
         """
         print("Training", end = " ")
-        self.model.train()
+        self.set_trainable()
         loss = kl = mse = 0.0
 
         for _, x in enumerate(dataloader):
@@ -324,8 +324,7 @@ class VAE(object):
             kl += _kl
             mse += _mse
 
-            if _ % 2 == 0:
-                print("=", end = "")
+            print("=", end = "")
 
         print(">", end = " ")
         return loss / len(dataloader.dataset), \
@@ -343,7 +342,7 @@ class VAE(object):
                 Tuple[float, float, float]: Testing losses
         """
         print("Testing", end = " ")
-        self.model.eval()
+        self.set_validation()
         loss = kl = mse = 0.0
 
         with torch.no_grad(): # No need to track the gradients
@@ -393,7 +392,7 @@ class VAE(object):
 
             if epoch == 0:
                 # No plots for the first epoch
-                pass
+                continue
 
             # Plots
             if valid_loader:
@@ -425,9 +424,31 @@ class VAE(object):
 
             # Checkpoint
             if checkpoints and epoch % 10 == 0:
-                torch.save(
-                    obj = self.model.state_dict(),
-                    f = f'weights/vae_{epoch}.pth'
-                )
+                self.save_weights(f'weights/vae_{epoch}.pth')
 
         return train_losses, valid_losses
+
+
+    def save_weights(self, filename: str) -> None:
+        """
+            Saves weights of the model
+
+            Parameters:
+                filename (str): The name and path for which to save the weights
+            Returns:
+                None
+        """
+        torch.save(
+            obj = self.model.state_dict(),
+            f = filename
+        )
+
+
+    def set_trainable(self):
+        """ Sets the model state to trainable """
+        self.model.train()
+
+
+    def set_validation(self):
+        """ Set the model state to validation """
+        self.model.eval()

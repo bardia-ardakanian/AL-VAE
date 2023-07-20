@@ -59,4 +59,5 @@ vae_cfg = {
     'use_xavier': False,        # Whether oor not to use xavier weight initialization
     'max_norm_gc': 5,           # Gradient Clipping max_norm
     'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
+    'detector_loss_coef': 1,    # Detector loss coefficient when adding the VAE's
 }
