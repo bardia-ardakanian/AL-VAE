@@ -360,7 +360,7 @@ class VAE(object):
             for _, x in enumerate(dataloader):
                 # load tensor to device
                 x = x.to(self.device)
-                x_hat, _loss, _kl, _mse = self.test_batch(x)
+                _loss, _kl, _mse = self.test_batch(x)
                 loss += _loss
                 kl += _kl
                 mse += _mse
