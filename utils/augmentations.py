@@ -426,7 +426,7 @@ class VAEAugmentation(object):
             RandomSampleCrop(),
             RandomMirror(),
             ToPercentCoords(),
-            Resize(800),
+            Resize(size),
         ])
 
     def __call__(self, img, boxes, labels):
