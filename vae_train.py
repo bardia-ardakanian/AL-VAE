@@ -1,65 +1,38 @@
 from data import *
-from utils.augmentations import SSDAugmentation, VAEAugmentation
+from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
 import os
-import copy
-import sys
 import time
 import torch
 from torch.autograd import Variable
-import torch.nn as nn
-import torch.optim as optim
 import torch.backends.cudnn as cudnn
-import torch.nn.init as init
 import torch.utils.data as data
-import numpy as np
 import argparse
-from visdom import Visdom
 
 # VAE
-from vae.model.networks import VAE
-from vae.utils.data_loader import load_data, VOCDataset
-from vae.utils.utilities import plot_reconstruction, plot_random_reconstructions, plot_metrics
+from vae.model import VAE
+from vae.utils import plot_reconstruction, plot_metrics, plot_random_reconstructions
+
+DETECTOR_LOSS_COEF = 1
 
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 
-parser = argparse.ArgumentParser(
-    description='Single Shot MultiBox Detector Training With Pytorch')
+parser = argparse.ArgumentParser(description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
                     type=str, help='VOC or COCO')
 parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
-parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
-                    help='Pretrained base model')
-parser.add_argument('--batch_size', default=4, type=int,
-                    help='Batch size for training')
-parser.add_argument('--resume', default="weights/ssd300_j1_VOC_40000.pth", type=str,
-                    help='Checkpoint state_dict file to resume training from')
-parser.add_argument('--start_iter', default=0, type=int,
-                    help='Resume training at this iter')
 parser.add_argument('--j1', default=True,
                     help='Train on J1 images')
 parser.add_argument('--num_workers', default=2, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
-parser.add_argument('--lr', '--learning-rate', default=1e-6, type=float,
-                    help='initial learning rate')
-parser.add_argument('--momentum', default=0.9, type=float,
-                    help='Momentum value for optim')
-parser.add_argument('--weight_decay', default=5e-4, type=float,
-                    help='Weight decay for SGD')
-parser.add_argument('--gamma', default=0.1, type=float,
-                    help='Gamma update for SGD')
-parser.add_argument('--visdom', default=False, type=str2bool,
-                    help='Use visdom for loss visualization')
-parser.add_argument('--tensorboard', default=True, type=str2bool,
-                    help='Use tensorboard for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
 args = parser.parse_args()
@@ -80,100 +53,77 @@ if not os.path.exists(args.save_folder):
 
 
 def train():
-    if args.visdom == True:
-        viz = Visdom()
 
+    # Load detector datasets
     if args.dataset == 'COCO':
-        if args.dataset_root == VOC_ROOT:
-            if not os.path.exists(COCO_ROOT):
-                parser.error('Must specify dataset_root if specifying dataset')
-            print("WARNING: Using default COCO dataset_root because " +
-                  "--dataset_root was not specified.")
-            args.dataset_root = COCO_ROOT
         cfg = coco
-        dataset = COCODetection(root=args.dataset_root,
-                                transform=SSDAugmentation(cfg['min_dim'],
-                                                          MEANS))
+        dataset = COCODetection(
+            root = args.dataset_root,
+            transform = SSDAugmentation(
+                size = cfg['min_dim'],
+                mean = MEANS
+            )
+        )
     elif args.dataset == 'VOC':
-        if args.dataset_root == COCO_ROOT:
-            parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
-        dataset = VOCDetection(root=args.dataset_root,
-                                transform=SSDAugmentation(cfg['min_dim'], MEANS), j1=True)
+        dataset = VOCDetection(
+            root = args.dataset_root,
+            transform = SSDAugmentation(
+                size = cfg['min_dim'],
+                means = MEANS
+            ),
+            j1 = True
+        )
 
-    if args.visdom:
-        import visdom
-        viz = visdom.Visdom()
-
-    if args.tensorboard:
-        from datetime import datetime
-        from torch.utils.tensorboard import SummaryWriter
-        run_name = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
-        writer = SummaryWriter(os.path.join('runs', 'SSD', 'tensorboard', run_name))
-
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
-    net = ssd_net
-
-    vae = VAE(has_skip = True)
+    net = build_ssd(
+        phase = 'train',
+        size = cfg['min_dim'],
+        num_classes = cfg['num_classes']
+    )
+    vae = VAE(
+        weight_decay = vae_cfg['weight_decay'],
+        kl_alpha = vae_cfg['kl_alpha'],
+        learning_rate = vae_cfg['learning_rate'],
+        latent_dim = vae_cfg['latent_dim'],
+        has_skip = vae_cfg['has_skip']
+    )
 
     if args.cuda:
-        net = torch.nn.DataParallel(ssd_net)
+        net = torch.nn.DataParallel(net)
         cudnn.benchmark = True
-
-    if args.resume:
-        print('Resuming training, loading {}...'.format(args.resume))
-        ssd_net.load_weights(args.resume)
-    else:
-        vgg_weights = torch.load(args.save_folder + args.basenet)
-        print('Loading base network...')
-        ssd_net.vgg.load_state_dict(vgg_weights)
-
-    if args.cuda:
+        # Load models on GPU
         net = net.cuda()
-        # VAE
         vae.model = vae.model.cuda()
 
-    if not args.resume:
-        print('Initializing weights...')
-        # initialize newly added layers' weights with xavier method
-        ssd_net.extras.apply(weights_init)
-        ssd_net.loc.apply(weights_init)
-        ssd_net.conf.apply(weights_init)
+    criterion = MultiBoxLoss(
+        num_classes = cfg['num_classes'],
+        overlap_thresh = 0.5,
+        prior_for_matching = True,
+        bkg_label = 0,
+        neg_mining = True,
+        neg_pos = 3,
+        neg_overlap = 0.5,
+        encode_target = False,
+        use_gpu = args.cuda
+    )
 
-    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum,
-                          weight_decay=args.weight_decay)
-    criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5,
-                             False, args.cuda)
-
-    # loss counters
-    loc_loss = 0
-    conf_loss = 0
     epoch = 0
-    print('Loading the dataset...')
-
     epoch_size = len(dataset) // args.batch_size
-    print('Training SSD on:', dataset.name)
-    print('Dataset size:', len(dataset))
-    print('Using the specified args:')
-    print(args)
 
-    step_index = 0
-
-    if args.visdom:
-        vis_title = 'SSD.PyTorch on ' + dataset.name
-        vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
-        iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend, viz)
-        epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend, viz)
-
-    data_loader = data.DataLoader(dataset, args.batch_size,
-                                  num_workers=args.num_workers,
-                                  shuffle=True, collate_fn=detection_collate,
-                                  pin_memory=True)
-
+    # Load Detector data
+    data_loader = data.DataLoader(
+        dataset = dataset,
+        batch_size = args.batch_size,
+        num_workers = args.num_workers,
+        shuffle = True,
+        collate_fn = detection_collate,
+        pin_memory = True
+    )
+    # Load VAE data
     vae_train_dataset, vae_train_loader, vae_valid_dataset, vae_valid_loader = load_data(
         train_dirs = ["data\VOCdevkit\VOC2012\JPEGImages", "data\VOCdevkit\VOC2007\JPEGImages"],
         valid_dirs = ["data\VOCdevkit\VOC2007\JPEGImages"],
-        batch_size = args.batch_size,
+        batch_size = vae_cfg['batch_size'],
         dataset = VOCDataset
     )
 
@@ -181,27 +131,18 @@ def train():
     batch_iterator = iter(data_loader)
     vae_batch_train_iterator = iter(vae_train_loader)
     vae_batch_valid_iterator = iter(vae_valid_loader)
-    for iteration in range(args.start_iter, cfg['max_iter']):
-        if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
-            update_vis_plot(epoch, loc_loss, conf_loss, iter_plot, epoch_plot,
-                            'append', viz, epoch_size=epoch_size)
-            # reset epoch loss counters
-            loc_loss = 0
-            conf_loss = 0
+    for iteration in range(0, vae_cfg['max_iter']):
+        if iteration != 0 and (iteration % epoch_size == 0):
             epoch += 1
 
-        if iteration in cfg['lr_steps']:
-            step_index += 1
-            adjust_learning_rate(optimizer, args.gamma, step_index)
-
-        # load train data
+        # Load image batch
         try:
             images, targets = next(batch_iterator)
             vae_images = next(vae_batch_train_iterator)
         except:
             batch_iterator = iter(data_loader)
-            images, targets = next(batch_iterator)
             vae_batch_train_iterator = iter(vae_train_loader)
+            images, targets = next(batch_iterator)
             vae_images = next(vae_batch_train_iterator)
 
         if args.cuda:
@@ -215,101 +156,51 @@ def train():
 
         # forward
         t0 = time.time()
-        out = net(vae_images)
-
-        # backprop
-        optimizer.zero_grad()
-        loss_l, loss_c = criterion(out, targets)
-        loss = loss_l + loss_c
+        out = net(vae_images)                       # Get Detector outputs
+        loss_l, loss_c = criterion(out, targets)    # Calculate localization and confidence loss
+        det_loss = loss_l + loss_c                  # Calculate total loss
+        vae_loss, vae_loss_kl, vae_loss_mse = vae.train_batch(
+            x = vae_images,
+            extra_loss = (DETECTOR_LOSS_COEF * det_loss)
+        )
         t1 = time.time()
-        loc_loss += loss_l.data
-        conf_loss += loss_c.data
 
-        # Backpropagation pass for VAE
-        vae_x_hat, vae_loss, vae_loss_kl, vae_loss_mse = vae.predict(vae_images)
-        vae_loss += loss    # Detector Loss + VAE Loss
-        vae.optimizer.zero_grad()
-        vae_loss.backward()
-        torch.nn.utils.clip_grad_norm_(vae.model.parameters(), 5)
-        vae.optimizer.step()
+        if iteration != 0 and iteration % 2000 == 0:
+            # Validate
+            plot_random_reconstructions(
+                model = vae.model,
+                dataset = vae_valid_dataset,
+                save_only = True,
+                filename = f"results/recon_{iteration}_random.jpg"
+            )
+            # Reconstruct
+            plot_reconstruction(
+                model = vae.model,
+                dataset = vae_train_dataset,
+                save_only = True,
+                filename = f"results/recon_{iteration}.jpg"
+            )
 
-        if iteration != 0 and iteration % 500 == 0:
-            plot_random_reconstructions(vae.model, vae_train_dataset, save_only=True, filename=f"results/recon_random_{iteration}.jpg")
-            plot_reconstruction(vae.model, vae_train_dataset, save_only=True, filename=f"results/recon_{iteration}.jpg")
-
+        # Log
         if iteration % 50 == 0:
-            print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data), f"VAE Loss: {vae_loss.item()} ||", end=' ')
+            print(f"EPOCH {epoch}\tIter {repr(iteration)} - Took {round(t1-t0, 4)})")
+            print(f"\t- Detector Loss)\tLoc: {loss_l}\tConf:\t{loss_c}\tTotal:{det_loss}")
+            print(f"\t- VAE Loss)\tKL: {vae_loss_kl}\tMSE:\t{vae_loss_mse}\tTotal:{vae_loss}")
 
-        if args.visdom:
-            update_vis_plot(iteration, loss_l.data, loss_c.data,
-                            iter_plot, epoch_plot, 'append', viz)
-
-        if args.tensorboard:
-            writer.add_scalar('losses/vae_kl_loss', vae_loss_kl, iteration)
-            writer.add_scalar('losses/vae_mse_loss', vae_loss_mse, iteration)
-            writer.add_scalar('losses/vae_loss', vae_loss, iteration)
-
+        # Checkpoint
         if iteration != 0 and iteration % 5000 == 0:
-            print('Saving state, iter:', iteration)
-            torch.save(vae.model.state_dict(), 'weights/vae_' + args.dataset + '_' +
-                       repr(iteration) + '.pth')
+            print("\t- Saving VAE weights...")
+            torch.save(
+                obj = vae.model.state_dict(),
+                f = 'weights/vae_' + args.dataset + '_' + repr(iteration) + '.pth'
+            )
 
-    torch.save(vae.model.state_dict(),
-               args.save_folder + '' + args.dataset + '.pth')
-
-
-def adjust_learning_rate(optimizer, gamma, step):
-    """Sets the learning rate to the initial LR decayed by 10 at every
-        specified step
-    # Adapted from PyTorch Imagenet example:
-    # https://github.com/pytorch/examples/blob/master/imagenet/main.py
-    """
-    lr = args.lr * (gamma ** (step))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-
-def xavier(param):
-    init.xavier_uniform(param)
-
-
-def weights_init(m):
-    if isinstance(m, nn.Conv2d):
-        xavier(m.weight.data)
-        m.bias.data.zero_()
-
-
-def create_vis_plot(_xlabel, _ylabel, _title, _legend, viz):
-    return viz.line(
-        X=torch.zeros((1,)).cpu(),
-        Y=torch.zeros((1, 3)).cpu(),
-        opts=dict(
-            xlabel=_xlabel,
-            ylabel=_ylabel,
-            title=_title,
-            legend=_legend
-        )
+    torch.save(
+        obj = vae.model.state_dict(),
+        f = args.save_folder + '' + args.dataset + '.pth'
     )
 
-
-def update_vis_plot(iteration, loc, conf, window1, window2, update_type, viz, epoch_size=1):
-    viz.line(
-        X=torch.ones((1, 3)).cpu() * iteration,
-        Y=torch.Tensor([loc, conf, loc + conf]).unsqueeze(0).cpu() / epoch_size,
-        win=window1,
-        update=update_type
-    )
-    # initialize epoch plot on first iteration
-    if iteration == 0:
-        viz.line(
-            X=torch.zeros((1, 3)).cpu(),
-            Y=torch.Tensor([loc, conf, loc + conf]).unsqueeze(0).cpu(),
-            win=window2,
-            update=True
-        )
 
 
 if __name__ == '__main__':
-    # training loop
     train()
