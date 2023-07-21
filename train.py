@@ -103,7 +103,7 @@ def train():
                                     transform=SSDAugmentation(cfg['min_dim'], MEANS))
         else:
             dataset = VOCDetection(root=args.dataset_root,
-                                   transform=SSDAugmentation(cfg['min_dim'], MEANS), sample=True)
+                                   transform=SSDAugmentation(cfg['min_dim'], MEANS))
 
     # if args.visdom:
     #     viz = None

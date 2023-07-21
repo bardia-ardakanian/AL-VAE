@@ -12,6 +12,7 @@ import torch
 import torch.utils.data as data
 import cv2
 import random
+import copy
 import numpy as np
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
@@ -97,10 +98,12 @@ class VOCDetection(data.Dataset):
     """
 
     def __init__(self, root,
-                 image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
+                 # image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
+                 image_sets=[('2007', 'trainval')],
                  transform=None, target_transform=VOCAnnotationTransform(),
                  dataset_name='VOC0712',
-                 sample=False,
+                 exclude_set=False,  # Exclude Set: Original Dataset - Sample set  # J2
+                 sample_set=False,  # Sample Set: Random Images  # J1
                  sample_size=1000,
                  seed=137):
         self.root = root
@@ -116,15 +119,20 @@ class VOCDetection(data.Dataset):
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
 
-        if sample:
+        if exclude_set or sample_set:
             # Set the seed for reproducibility
             random.seed(seed)
 
             # Randomly select 1000 IDs
             sample_ids = random.sample(self.ids, sample_size)
 
-            # Rewrite
-            self.ids = sample_ids
+            if exclude_set:
+                # Exclude the sampled data from the original dataset
+                self.ids = [item for item in self.ids if item not in sample_ids]
+
+            if sample_set:
+                # Rewrite
+                self.ids = sample_ids
 
     def __getitem__(self, index):
         im, gt, h, w = self.pull_item(index)
