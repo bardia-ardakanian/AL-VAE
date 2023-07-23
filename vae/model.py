@@ -5,11 +5,11 @@ from torch import Tensor
 import torch.optim as optim
 import torch.nn.init as init
 import torch.nn.functional as F
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from torch.utils.data import DataLoader
 
 # Third-party imports
-from vae.utils import plot_random_reconstructions, plot_reconstruction, plot_metrics
+from vae.utils import plot_random_reconstructions, plot_reconstruction
 
 
 class VAECore(nn.Module):
@@ -146,6 +146,9 @@ class VAECore(nn.Module):
         x = self.decoder_1(x)
         x = x.reshape([-1, 64, 16, 16])
         if self.has_skip:
+            feat = feat[:, :, :16, :16]
+            noise = torch.rand(feat.shape).to(self.device)
+            feat = feat + noise
             x = torch.cat((x, feat), dim = 1)  # Concat with the feature Tensor
         x = self.decoder_2(x)
         x = torch.sigmoid(x)
@@ -311,7 +314,7 @@ class VAE(object):
             Returns:
                 (Tuple[float, float, float]): Training losses
         """
-        print("Training", end = " ")
+        print("Training", end = "\t")
         self.set_trainable()
         loss = kl = mse = 0.0
 
@@ -341,7 +344,7 @@ class VAE(object):
             Returns:
                 Tuple[float, float, float]: Testing losses
         """
-        print("Testing", end = " ")
+        print("Testing", end = "\t")
         self.set_validation()
         loss = kl = mse = 0.0
 
@@ -353,9 +356,7 @@ class VAE(object):
                 loss += _loss
                 kl += _kl
                 mse += _mse
-                
-                if _ % 2 == 0:
-                    print("=", end = "")
+                print("=", end = "")
 
         print(">", end = " ")
         return loss / len(dataloader.dataset), \
@@ -381,13 +382,15 @@ class VAE(object):
             print(f"\nEPOCH {epoch})")
             # Train
             _train_loss, _train_kl, _train_mse = self.train_epoch(train_loader)
-            print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)}")
+            change = self.calculate_change(_train_loss, train_losses)
+            print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change} change)")
             train_losses.append(_train_loss)
 
             # Test
             if valid_loader:
                 _val_loss, _val_kl, _val_mse = self.test_epoch(valid_loader)
-                print(f"KL: {round(_val_kl.item(), 1)}\tMSE: {round(_val_mse.item(), 1)}\tTotal: {round(_val_loss.item(), 1)}")
+                change = self.calculate_change(_val_loss, valid_losses)
+                print(f"KL: {round(_val_kl.item(), 1)}\tMSE: {round(_val_mse.item(), 1)}\tTotal: {round(_val_loss.item(), 1)} ({change} change)")
                 valid_losses.append(_val_loss)
 
             if epoch == 0:
@@ -397,14 +400,15 @@ class VAE(object):
             # Plots
             if valid_loader:
                 # Plot reconstruction of training data
-                plot_reconstruction(
-                    vae = self,
-                    dataset = train_loader.dataset,
-                    n = 7,
-                    device = self.device,
-                    filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
-                )
                 if epoch % 5 == 0:
+                    plot_reconstruction(
+                        vae = self,
+                        dataset = train_loader.dataset,
+                        n = 7,
+                        device = self.device,
+                        filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
+                    )
+                if epoch % 10 == 0:
                     # Plot random reconstruction of validation data
                     plot_random_reconstructions(
                         vae = self,
@@ -413,13 +417,6 @@ class VAE(object):
                         times = 5,
                         device = self.device,
                         filename = f"results/vae/recon_{epoch}_random.jpg" if not only_save_plots else None
-                    )
-                if epoch % 10 == 0:
-                    # Plot metrics
-                    plot_metrics(
-                        train_losses = train_losses,
-                        valid_losses = valid_losses,
-                        filename = f"results/vae/metrics{epoch}.jpg" if not only_save_plots else None
                     )
 
             # Checkpoint
@@ -442,6 +439,23 @@ class VAE(object):
             obj = self.model.state_dict(),
             f = filename
         )
+
+
+    def calculate_change(self, value: float, history: List[float]) -> str:
+        """ 
+            Calculates change of a value as percentage
+
+            Parameters:
+                value (float): New value
+                history (List[float]) Historical values
+            Return:
+                (str): Percentage of change with sign
+        """
+        if len(history) == 0:
+            return 0
+        else:
+            change = (value - history[-1]) / history[-1] * 100
+            return f"{round(change.item(), 1)}%"
 
 
     def set_trainable(self):

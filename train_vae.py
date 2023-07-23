@@ -4,7 +4,7 @@ import torch
 from data import *
 
 # Third-party imports
-from vae.utils import plot_metrics, plot_random_reconstructions, load_data
+from vae.utils import plot_metrics, plot_random_reconstructions, load_data, generate_psnr_table
 from vae.model import VAE
 
 # Constants
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     os.makedirs('results/vae', exist_ok = True)
 
     # Load data
-    train_dataset, train_loader, valid_dataset, valid_loader = load_data(
+    train_loader, valid_loader = load_data(
         train_dirs = [VOC_TRAIN_DIR],
         test_dirs = [VOC_VALID_DIR],
         batch_size = vae_cfg['batch_size'],
@@ -50,20 +50,26 @@ if __name__ == '__main__':
         only_save_plots = True,
     )
 
+    # Generate PSNR table
+    generate_psnr_table(
+        model = vae,
+        dataset = valid_loader.dataset,
+        n = 3,
+        times = 5,
+        device = torch.device('cuda') if vae_cfg['use_cuda'] else torch.device('cpu')
+    )
+
     # Plot metrics
     plot_metrics(train_loss, val_loss, filename = 'results/vae/metrics.jpg')
 
     # Plot reconstructrion
     plot_random_reconstructions(
-        vae,
-        valid_dataset,
+        model = vae,
+        dataset = valid_loader.dataset,
         n = 3,
         times = 5,
         device = torch.device('cuda') if vae_cfg['use_cuda'] else torch.device('cpu')
     )
 
     # Save final model
-    torch.save(
-        obj = vae.model.state_dict(),
-        f = f'weights/vae.pth'
-    )
+    vae.save_weights(f'weights/vae.pth')
