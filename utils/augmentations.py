@@ -422,11 +422,7 @@ class VAEAugmentation(object):
     def __init__(self, size=300):
         self.size = size
         self.augment = Compose([
-            ToAbsoluteCoords(),
-            RandomSampleCrop(),
-            RandomMirror(),
-            ToPercentCoords(),
-            Resize(size),
+            Resize(self.size),
         ])
 
     def __call__(self, img, boxes, labels):
