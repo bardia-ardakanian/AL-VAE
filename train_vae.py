@@ -2,6 +2,8 @@
 import os
 import torch
 from data import *
+import torch.utils.data as data
+from utils.augmentations import VAEAugmentation
 
 # Third-party imports
 from vae.utils import plot_metrics, plot_random_reconstructions, load_data, generate_psnr_table
@@ -15,18 +17,23 @@ VOC_TRAIN_DIR: str = 'data/VOCdevkit/VOC2012/JPEGImages'
 VOC_VALID_DIR: str = 'data/VOCdevkit/VOC2007/JPEGImages'
 
 
-
 if __name__ == '__main__':
     os.makedirs('results/vae', exist_ok = True)
 
     # Load data
-    train_loader, valid_loader = load_data(
-        train_dirs = [VOC_TRAIN_DIR],
-        test_dirs = [VOC_VALID_DIR],
+    dataset = VOCDetection(
+        root = 'data/VOCdevkit',
+        transform = VAEAugmentation(vae_cfg['image_size']),
+        sample_set = True,   # J1 images
+        is_vae = True
+    )
+    data_loader = data.DataLoader(
+        dataset = dataset,
         batch_size = vae_cfg['batch_size'],
-        num_images = vae_cfg['num_images'],
-        image_size = vae_cfg['image_size'],
-        num_workers = 2 if vae_cfg['use_cuda'] else 4
+        num_workers = 2 if vae_cfg['use_cuda'] else 4,
+        shuffle = True,
+        collate_fn = detection_collate,
+        pin_memory = True,
     )
 
     # Define Model
@@ -44,8 +51,7 @@ if __name__ == '__main__':
     # Train
     train_loss, val_loss = vae.train_valid(
         epochs = vae_cfg['epochs'],
-        train_loader = train_loader,
-        valid_loader = valid_loader,
+        data_loader = data_loader,
         checkpoints = False,
         only_save_plots = True,
     )
@@ -53,7 +59,7 @@ if __name__ == '__main__':
     # Generate PSNR table
     generate_psnr_table(
         model = vae,
-        dataset = valid_loader.dataset,
+        dataset = data_loader.dataset,
         n = 3,
         times = 5,
         device = torch.device('cuda') if vae_cfg['use_cuda'] else torch.device('cpu')
@@ -65,7 +71,7 @@ if __name__ == '__main__':
     # Plot reconstructrion
     plot_random_reconstructions(
         model = vae,
-        dataset = valid_loader.dataset,
+        dataset = data_loader.dataset,
         n = 3,
         times = 5,
         device = torch.device('cuda') if vae_cfg['use_cuda'] else torch.device('cpu')

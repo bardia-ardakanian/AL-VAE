@@ -165,7 +165,7 @@ def plot_reconstruction(vae, dataset: VAEDataset, n: int = 5, device: torch.devi
 
     for i in range(n):
         ax = plt.subplot(2, n, i + 1)
-        img = dataset[i].unsqueeze(0).to(device)
+        img = dataset[i][0].unsqueeze(0).to(device)
         vae.model.eval()
 
         # Reconstruct the image using the encoder and decoder
@@ -212,7 +212,7 @@ def plot_random_reconstructions(vae, dataset: VAEDataset, n: int = 5, times: int
 
     for i in range(n):
         ax = plt.subplot(n, times + 1, (i * (times + 1) + 1))
-        img = dataset[i].unsqueeze(0).to(device)
+        img = dataset[i][0].unsqueeze(0).to(device)
 
         # Plot the original image
         ax.get_xaxis().set_visible(False)

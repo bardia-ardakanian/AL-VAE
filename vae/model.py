@@ -320,7 +320,8 @@ class VAE(object):
 
         for _, x in enumerate(dataloader):
             # Load tensor to device
-            x = x.to(self.device)
+            import torchvision.transforms.functional as TF
+            x = x[0].to(self.device)
             # Train and calculate comulicative loss
             _loss, _kl, _mse = self.train_batch(x, extra_loss)
             loss += _loss
@@ -351,7 +352,7 @@ class VAE(object):
         with torch.no_grad(): # No need to track the gradients
             for _, x in enumerate(dataloader):
                 # load tensor to device
-                x = x.to(self.device)
+                x = x[0].to(self.device)
                 _loss, _kl, _mse = self.test_batch(x)
                 loss += _loss
                 kl += _kl
@@ -364,14 +365,13 @@ class VAE(object):
                 mse / len(dataloader.dataset),
 
 
-    def train_valid(self, epochs: int, train_loader: Optional[DataLoader] = None, valid_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True) -> Tuple[list, list]:
+    def train_valid(self, epochs: int, data_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True) -> Tuple[list, list]:
         """
             Trains and evaluates the model
 
             Parameters:
                 epochs (int): Number of epochs to train on
-                train_loader (DataLoader): The dataloader used for training
-                valid_loader (DataLoader): The dataloader used for validating
+                data_loader (DataLoader): The dataloader used for training and validation
             Returns:
                 (List[list, list]): List of training and validation losses
         """
@@ -381,43 +381,40 @@ class VAE(object):
         for epoch in range(epochs):
             print(f"\nEPOCH {epoch})")
             # Train
-            _train_loss, _train_kl, _train_mse = self.train_epoch(train_loader)
+            _train_loss, _train_kl, _train_mse = self.train_epoch(data_loader)
             change = self.calculate_change(_train_loss, train_losses)
             print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change} change)")
             train_losses.append(_train_loss)
 
             # Test
-            if valid_loader:
-                _val_loss, _val_kl, _val_mse = self.test_epoch(valid_loader)
-                change = self.calculate_change(_val_loss, valid_losses)
-                print(f"KL: {round(_val_kl.item(), 1)}\tMSE: {round(_val_mse.item(), 1)}\tTotal: {round(_val_loss.item(), 1)} ({change} change)")
-                valid_losses.append(_val_loss)
+            _val_loss, _val_kl, _val_mse = self.test_epoch(data_loader)
+            change = self.calculate_change(_val_loss, valid_losses)
+            print(f"KL: {round(_val_kl.item(), 1)}\tMSE: {round(_val_mse.item(), 1)}\tTotal: {round(_val_loss.item(), 1)} ({change} change)")
+            valid_losses.append(_val_loss)
 
             if epoch == 0:
                 # No plots for the first epoch
                 continue
 
-            # Plots
-            if valid_loader:
-                # Plot reconstruction of training data
-                if epoch % 5 == 0:
-                    plot_reconstruction(
-                        vae = self,
-                        dataset = train_loader.dataset,
-                        n = 7,
-                        device = self.device,
-                        filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
-                    )
-                if epoch % 10 == 0:
-                    # Plot random reconstruction of validation data
-                    plot_random_reconstructions(
-                        vae = self,
-                        dataset = valid_loader.dataset,
-                        n = 3,
-                        times = 5,
-                        device = self.device,
-                        filename = f"results/vae/recon_{epoch}_random.jpg" if not only_save_plots else None
-                    )
+            # Plot reconstruction of training data
+            if epoch % 5 == 0:
+                plot_reconstruction(
+                    vae = self,
+                    dataset = data_loader.dataset,
+                    n = 7,
+                    device = self.device,
+                    filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
+                )
+            if epoch % 10 == 0:
+                # Plot random reconstruction of validation data
+                plot_random_reconstructions(
+                    vae = self,
+                    dataset = data_loader.dataset,
+                    n = 3,
+                    times = 5,
+                    device = self.device,
+                    filename = f"results/vae/recon_{epoch}_random.jpg" if not only_save_plots else None
+                )
 
             # Checkpoint
             if checkpoints and epoch % 10 == 0:

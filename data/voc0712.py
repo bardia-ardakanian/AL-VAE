@@ -11,6 +11,7 @@ import sys
 import torch
 import torch.utils.data as data
 import cv2
+import torchvision.transforms.functional as TF
 import random
 import copy
 import numpy as np
@@ -105,7 +106,9 @@ class VOCDetection(data.Dataset):
                  exclude_set=False,  # Exclude Set: Original Dataset - Sample set  # J2
                  sample_set=False,  # Sample Set: Random Images  # J1
                  sample_size=1000,
-                 seed=137):
+                 seed=137,
+                 is_vae: bool = False,
+                 ):
         self.root = root
         self.image_set = image_sets
         self.transform = transform
@@ -114,6 +117,7 @@ class VOCDetection(data.Dataset):
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
+        self.is_vae = is_vae
         for (year, name) in image_sets:
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
@@ -159,7 +163,13 @@ class VOCDetection(data.Dataset):
             img = img[:, :, (2, 1, 0)]
             # img = img.transpose(2, 0, 1)
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
+
+        if self.is_vae:
+            img = TF.to_tensor(img)
+        else:
+            img = torch.from_numpy(img).permute(2, 0, 1)
+
+        return img, target, height, width
         # return torch.from_numpy(img), target, height, width
 
     def pull_image(self, index):
