@@ -2,7 +2,7 @@
 import os.path
 from pathlib import Path
 
-# gets home dir cross-platform
+# gets home dir cross platform
 ROOT = os.path.expanduser("~")
 HOME = os.getcwd()
 
@@ -47,16 +47,16 @@ coco = {
 vae_cfg = {
     'has_skip': True,           # Whether to use Skip Connections for the VAE
     'use_cuda': False,          # Whether to use Cuda or run on CPU
-    'latent_dim': 256,          # Latent dimentions in which to save Mu and Sigma
-    'kl_alpha': 10,             # Kullback-Leibler divergence coefficient
+    'latent_dim': 32,           # Latent dimentions in which to save Mu and Sigma
+    'kl_alpha': 30,             # Kullback-Leibler divergence coefficient
     'learning_rate': 1e-3,      # Optimizer learning rate
     'weight_decay': 1e-5,       # Optimizer weight decay
-    'batch_size': 32,           # Batch size
+    'batch_size': 16,           # Batch size
     'max_iter': 50000,          # Maximum number of iterations (despite batch_size and epochs)
-    'epochs': 30,               # Number of epochs to train on
+    'epochs': 100,              # Number of epochs to train on
     'image_size': 300,          # Width and height of each image
-    'num_images': 10000,        # Number of images to select from both training and testing
-    'use_xavier': False,        # Whether oor not to use xavier weight initialization
+    'num_images': 1000,         # Number of images to select from both training and testing
+    'use_xavier': False,        # Whether or not to use xavier weight initialization
     'max_norm_gc': 5,           # Gradient Clipping max_norm
     'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
     'detector_loss_coef': 1,    # Detector loss coefficient when adding the VAE's

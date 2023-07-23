@@ -1,5 +1,6 @@
 # Standard imports
 import math
+import pandas as pd
 import torch
 import torchvision
 import numpy as np
@@ -225,8 +226,7 @@ def plot_random_reconstructions(vae, dataset: VAEDataset, n: int = 5, times: int
 
             # Reconstruct the image using the encoder and decoder
             with torch.no_grad():
-                noise = torch.randn_like(img) * 0 # Add noise
-                rec_img, _, _, _ = vae.predict(img.float() + noise, is_inference=True)
+                rec_img, _, _, _ = vae.predict(img.float(), is_inference=True)
 
             # Calculate PSNR
             E_img = rec_img.cpu().squeeze().permute(1, 2, 0).numpy()
@@ -244,3 +244,44 @@ def plot_random_reconstructions(vae, dataset: VAEDataset, n: int = 5, times: int
     else:
         # plt.tight_layout()
         plt.show()
+
+
+def generate_psnr_table(vae, dataset: VAEDataset, n: int = 5, times: int = 5, device: torch.device = torch.device("cpu"), filename: str = None) -> None:
+    """
+        Generates the PSNR table for further analysis
+
+        Parameters:
+            model (VAE): The VAE models
+            dataset (VAEDataset): Dataset to use samples from
+            n (int): Number of images to plot
+            times (int): Number of times to feed an image to the network
+            device (torch.device): Whether to use CPU or Cuda
+            filename (str): Filename for the results to be saved
+        Returns:
+            None
+    """
+    vae.model.eval()
+    data = {i:[] for i in range(times)}
+
+    for i in range(n):
+        img = dataset[i].unsqueeze(0).to(torch.device('cuda'))
+
+        H_img = img.cpu().squeeze().permute(1, 2, 0).numpy()
+
+        for j in range(times):
+
+            # Reconstruct the image using the encoder and decoder
+            with torch.no_grad():
+                noise = torch.randn_like(img) # Add noise
+                rec_img, _, _, _ = vae.predict(img.float() + noise, is_inference=True)
+
+            # Calculate PSNR
+            E_img = rec_img.cpu().squeeze().permute(1, 2, 0).numpy()
+            psnr = calculate_psnr(E_img, H_img)
+            data[j].append(round(psnr, 2))
+    
+    df = pd.DataFrame(data)
+    df['max'] = df[df.columns].max(axis=1)
+    df['min'] = df[df.columns].min(axis=1)
+    df['variation'] = df['max'] - df['min']
+    df.to_csv(filename, index=False)
