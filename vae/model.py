@@ -7,6 +7,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 from typing import Tuple, Optional, List
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 # Third-party imports
 from vae.utils import plot_random_reconstructions, plot_reconstruction
@@ -108,9 +109,7 @@ class VAECore(nn.Module):
 
     def init_weights(self, m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-            init.xavier_uniform_(m.weight)
-            if m.bias is not None:
-                init.constant_(m.bias, 0.0)
+            init.xavier_uniform_(m.weight)  # Uniform
 
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Tensor]:
@@ -366,7 +365,7 @@ class VAE(object):
                 mse / len(dataloader.dataset),
 
 
-    def train_valid(self, epochs: int, data_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True) -> Tuple[list, list]:
+    def train_valid(self, epochs: int, data_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True, tensorboard_writer: SummaryWriter = None) -> Tuple[list, list]:
         """
             Trains and evaluates the model
 
@@ -387,11 +386,21 @@ class VAE(object):
             print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change} change)")
             train_losses.append(_train_loss)
 
+            if tensorboard_writer:
+                tensorboard_writer.add_scalar('train_kl', _train_kl.item(), epoch)
+                tensorboard_writer.add_scalar('train_mse', _train_mse.item(), epoch)
+                tensorboard_writer.add_scalar('train_total', _train_loss.item(), epoch)
+
             # Test
-            _val_loss, _val_kl, _val_mse = self.test_epoch(data_loader)
-            change = self.calculate_change(_val_loss, valid_losses)
-            print(f"KL: {round(_val_kl.item(), 1)}\tMSE: {round(_val_mse.item(), 1)}\tTotal: {round(_val_loss.item(), 1)} ({change} change)")
-            valid_losses.append(_val_loss)
+            _valid_loss, _valid_kl, _valid_mse = self.test_epoch(data_loader)
+            change = self.calculate_change(_valid_loss, valid_losses)
+            print(f"KL: {round(_valid_kl.item(), 1)}\tMSE: {round(_valid_mse.item(), 1)}\tTotal: {round(_valid_loss.item(), 1)} ({change} change)")
+            valid_losses.append(_valid_loss)
+
+            if tensorboard_writer:
+                tensorboard_writer.add_scalar('valid_kl', _valid_kl.item(), epoch)
+                tensorboard_writer.add_scalar('valid_mse', _valid_mse.item(), epoch)
+                tensorboard_writer.add_scalar('valid_total', _valid_loss.item(), epoch)
 
             if epoch == 0:
                 # No plots for the first epoch

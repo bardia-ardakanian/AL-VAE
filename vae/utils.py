@@ -274,7 +274,7 @@ def generate_psnr_table(vae, dataset: VAEDataset, n: int = 5, times: int = 5, de
     data = {i:[] for i in range(times)}
 
     for i in range(n):
-        img = dataset[i].unsqueeze(0).to(torch.device('cuda'))
+        img = dataset[i][0].unsqueeze(0).to(torch.device('cuda'))
 
         H_img = img.cpu().squeeze().permute(1, 2, 0).numpy()
 

@@ -2,8 +2,10 @@
 import os
 import torch
 from data import *
+from datetime import datetime
 import torch.utils.data as data
 from utils.augmentations import VAEAugmentation
+from torch.utils.tensorboard import SummaryWriter
 
 # Third-party imports
 from vae.utils import plot_metrics, plot_random_reconstructions, load_data, generate_psnr_table
@@ -19,6 +21,10 @@ if __name__ == '__main__':
     # Create dirs if not already exist
     os.makedirs('results/vae', exist_ok = True)
     os.makedirs('weights', exist_ok = True)
+
+    # initialize Tensorboard writer
+    run_name = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
+    writer = SummaryWriter(os.path.join('runs', 'SSD', 'tensorboard', f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'))
 
     # Load data
     dataset = VOCDetection(
@@ -64,6 +70,7 @@ if __name__ == '__main__':
         data_loader = data_loader,
         checkpoints = False,
         only_save_plots = True,
+        tensorboard_writer = writer if vae_cfg['use_tensorboard'] else None,
     )
 
     # Generate PSNR table

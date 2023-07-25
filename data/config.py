@@ -53,12 +53,13 @@ vae_cfg = {
     'weight_decay': 1e-5,       # Optimizer weight decay
     'batch_size': 16,           # Batch size
     'max_iter': 50000,          # Maximum number of iterations (despite batch_size and epochs)
-    'epochs': 100,              # Number of epochs to train on
+    'epochs': 300,              # Number of epochs to train on
     'image_size': 300,          # Width and height of each image
     'num_images': 1000,         # Number of images to select from both training and testing
     'use_xavier': False,        # Whether or not to use xavier weight initialization
     'max_norm_gc': 5,           # Gradient Clipping max_norm
     'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
     'detector_loss_coef': 1,    # Detector loss coefficient when adding the VAE's
-    'use_cv': False,            # Whether to use OpenCV or Torchvision to read images
+    'use_cv': True,             # Whether to use OpenCV or Torchvision to read images
+    'use_tensorboard': True     # Whether to use Tensorboard to plot losses
 }
