@@ -180,6 +180,12 @@ def train():
         #     conf_loss = 0
         #     epoch += 1
 
+        if args.tensorboard and iteration != 0 and (iteration % epoch_size == 0):
+            # reset epoch loss counters
+            loc_loss = 0
+            conf_loss = 0
+            epoch += 1
+
         if iteration in cfg['lr_steps']:
             step_index += 1
             adjust_learning_rate(optimizer, args.gamma, step_index)

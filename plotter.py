@@ -1,11 +1,14 @@
-from utils.data import *
+from utility import *
+from data.config import *
+from data.voc0712 import VOC_ROOT
+from utils.augmentations import VAEAugmentation
 
 if __name__ == "__main__":
     # dataset config
     dataset_root = VOC_ROOT
     cfg = voc
 
-    exclude_dataset, exclude_loader, sample_dataset, sample_loader = exclude_sample_split(dataset_root=VOC_ROOT, transform=VAEAugmentation(cfg['min_dim']))
+    exclude_dataset, exclude_loader, sample_dataset, sample_loader = exclude_sample_split(dataset_root=VOC_ROOT, transform=VAEAugmentation())
 
     print(f'''Exclude Dataset Size: {len(exclude_dataset)}\nSample Dataset Size: {len(sample_dataset)}''')
 
@@ -22,6 +25,6 @@ if __name__ == "__main__":
 
         image, target = images[0], targets[0]
 
-        plot_image_with_annotations(image, target, cfg['min_dim'])
+        # plot_image_with_annotations(image, target, cfg['min_dim'])
 
         break

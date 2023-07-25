@@ -6,6 +6,7 @@ https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
 Updated by: Ellis Brown, Max deGroot
 """
 from .config import HOME
+import matplotlib.pyplot as plt
 import os.path as osp
 import sys
 import torch
@@ -215,3 +216,8 @@ class VOCDetection(data.Dataset):
             tensorized version of img, squeezed
         '''
         return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
+
+    def plot_image(self, image):
+        # Plot image in RGB format
+        plt.imshow(image)
+        plt.show()
