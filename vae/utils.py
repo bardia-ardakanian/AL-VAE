@@ -2,11 +2,13 @@
 import math
 import pandas as pd
 import torch
+import cv2
 import torchvision
 import numpy as np
 from torch import Tensor
 from pathlib import Path
 from typing import List, Tuple
+import torchvision.transforms.functional as TF
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import Compose, Resize, ToTensor, ToPILImage
@@ -14,15 +16,17 @@ from torchvision.transforms import Compose, Resize, ToTensor, ToPILImage
 
 class VAEDataset(Dataset):
 
-    def __init__(self, files: List[str], image_size: int) -> 'VAEDataset':
+    def __init__(self, files: List[str], image_size: int, use_cv: bool = True) -> 'VAEDataset':
         """
             Reads a list of image paths and defines lazy transformations
 
             Parameters:
                 files (List[str]): List of image pathes
                 image_size (int): Width and height of images
+                use_cv (bool): Will use CV2 of True, else with use torchvision
         """
         self.files = files
+        self.use_cv = use_cv
         self.transformations = Compose([
             ToPILImage("RGB"),
             Resize((image_size, image_size)),
@@ -47,9 +51,14 @@ class VAEDataset(Dataset):
             Parameters:
                 i (int): The index for which to return the image
             Returns:
-                (Tensor): Image
+                (Tensor): Image Tensor
         """
-        img = torchvision.io.read_image(self.files[i])
+        if self.use_cv:
+            img = cv2.imread(self.files[i])
+            img = TF.to_tensor(img)
+        else:
+            img = torchvision.io.read_image(self.files[i])
+
         img = self.transformations(img)     # Apply transformations
         if img.shape[0] == 1:
             img = torch.cat([img] * 3)
@@ -63,7 +72,8 @@ def load_data(
         batch_size: int = 32,
         num_images: int = 10000,
         image_size: int = 256,
-        num_workers: int = 2
+        num_workers: int = 2,
+        use_cv: bool = False,
         ) -> Tuple[DataLoader, DataLoader]:
     """
         Loads the data
@@ -80,7 +90,7 @@ def load_data(
     def _(dirs: List[str]):
         files = []
         [files.extend([str(file) for file in Path(dir).glob("*.jpg")]) for dir in dirs]
-        dataset = VAEDataset(files[:num_images], image_size)
+        dataset = VAEDataset(files[:num_images], image_size, use_cv)
         loader = DataLoader(
             dataset,                                # The dataset to load from
             batch_size = batch_size,                # How many samples per batch to load

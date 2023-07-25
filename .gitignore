@@ -137,3 +137,6 @@ test/
 
 # tensorboard
 runs/
+
+# results
+results/

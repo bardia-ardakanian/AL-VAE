@@ -314,7 +314,7 @@ class VAE(object):
             Returns:
                 (Tuple[float, float, float]): Training losses
         """
-        print("Training", end = "\t")
+        print("Training", end = " ")
         self.set_trainable()
         loss = kl = mse = 0.0
 
@@ -322,6 +322,7 @@ class VAE(object):
             # Load tensor to device
             import torchvision.transforms.functional as TF
             x = x[0].to(self.device)
+            # x = x.to(self.device)
             # Train and calculate comulicative loss
             _loss, _kl, _mse = self.train_batch(x, extra_loss)
             loss += _loss
@@ -345,7 +346,7 @@ class VAE(object):
             Returns:
                 Tuple[float, float, float]: Testing losses
         """
-        print("Testing", end = "\t")
+        print("Testing", end = " ")
         self.set_validation()
         loss = kl = mse = 0.0
 
@@ -397,15 +398,15 @@ class VAE(object):
                 continue
 
             # Plot reconstruction of training data
-            if epoch % 5 == 0:
+            if epoch % 10 == 0:
                 plot_reconstruction(
                     vae = self,
                     dataset = data_loader.dataset,
                     n = 7,
                     device = self.device,
-                    filename = f"results/vae/recon_{epoch}.jpg" if not only_save_plots else None
+                    filename = f"results/vae/recon_{epoch}.jpg" if only_save_plots else None
                 )
-            if epoch % 10 == 0:
+            if epoch % 20 == 0:
                 # Plot random reconstruction of validation data
                 plot_random_reconstructions(
                     vae = self,
@@ -413,12 +414,12 @@ class VAE(object):
                     n = 3,
                     times = 5,
                     device = self.device,
-                    filename = f"results/vae/recon_{epoch}_random.jpg" if not only_save_plots else None
+                    filename = f"results/vae/recon_{epoch}_random.jpg" if only_save_plots else None
                 )
 
             # Checkpoint
             if checkpoints and epoch % 10 == 0:
-                self.save_weights(f'weights/vae_{epoch}.pth')
+                self.save_weights(f'weights/vae_epoch_{epoch}.pth')
 
         return train_losses, valid_losses
 
