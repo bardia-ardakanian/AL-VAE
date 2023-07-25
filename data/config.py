@@ -48,7 +48,7 @@ vae_cfg = {
     'has_skip': True,           # Whether to use Skip Connections for the VAE
     'use_cuda': False,          # Whether to use Cuda or run on CPU
     'latent_dim': 32,           # Latent dimentions in which to save Mu and Sigma
-    'kl_alpha': 30,             # Kullback-Leibler divergence coefficient
+    'kl_alpha': 50,             # Kullback-Leibler divergence coefficient
     'learning_rate': 1e-3,      # Optimizer learning rate
     'weight_decay': 1e-5,       # Optimizer weight decay
     'batch_size': 16,           # Batch size
@@ -60,4 +60,5 @@ vae_cfg = {
     'max_norm_gc': 5,           # Gradient Clipping max_norm
     'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
     'detector_loss_coef': 1,    # Detector loss coefficient when adding the VAE's
+    'use_cv': False,            # Whether to use OpenCV or Torchvision to read images
 }

@@ -11,14 +11,14 @@ from vae.model import VAE
 
 # Constants
 torch.manual_seed(0)
-COCO_TRAIN_DIR: str = 'data/mmsample/train2017'
-COCO_VALID_DIR: str = 'data/mmsample/val2017'
-VOC_TRAIN_DIR: str = 'data/VOCdevkit/VOC2012/JPEGImages'
-VOC_VALID_DIR: str = 'data/VOCdevkit/VOC2007/JPEGImages'
+VOC_TRAIN_DIR = 'data/VOCdevkit/VOC2012/JPEGImages'
+VOC_VALID_DIR = 'data/VOCdevkit/VOC2007/JPEGImages'
 
 
 if __name__ == '__main__':
+    # Create dirs if not already exist
     os.makedirs('results/vae', exist_ok = True)
+    os.makedirs('weights', exist_ok = True)
 
     # Load data
     dataset = VOCDetection(
@@ -35,6 +35,16 @@ if __name__ == '__main__':
         collate_fn = detection_collate,
         pin_memory = True,
     )
+    # train_loader, valid_loader = load_data(
+    #     train_dirs = [VOC_TRAIN_DIR],
+    #     test_dirs = [VOC_VALID_DIR],
+    #     batch_size = vae_cfg['batch_size'],
+    #     num_images = vae_cfg['num_images'],
+    #     image_size = vae_cfg['image_size'],
+    #     num_workers = 2 if vae_cfg['use_cuda'] else 4,
+    #     use_cv = vae_cfg['use_cv'],
+    # )
+    # data_loader = train_loader
 
     # Define Model
     vae = VAE(
@@ -58,7 +68,7 @@ if __name__ == '__main__':
 
     # Generate PSNR table
     generate_psnr_table(
-        model = vae,
+        vae = vae,
         dataset = data_loader.dataset,
         n = 3,
         times = 5,
@@ -70,7 +80,7 @@ if __name__ == '__main__':
 
     # Plot reconstructrion
     plot_random_reconstructions(
-        model = vae,
+        vae = vae,
         dataset = data_loader.dataset,
         n = 3,
         times = 5,
@@ -78,4 +88,4 @@ if __name__ == '__main__':
     )
 
     # Save final model
-    vae.save_weights(f'weights/vae.pth')
+    vae.save_weights(f'weights/vae_final.pth')
