@@ -22,10 +22,6 @@ if __name__ == '__main__':
     os.makedirs('results/vae', exist_ok = True)
     os.makedirs('weights', exist_ok = True)
 
-    # initialize Tensorboard writer
-    run_name = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
-    writer = SummaryWriter(os.path.join('runs', 'SSD', 'tensorboard', f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'))
-
     # Load data
     dataset = VOCDetection(
         root = 'data/VOCdevkit',
@@ -70,7 +66,7 @@ if __name__ == '__main__':
         data_loader = data_loader,
         checkpoints = False,
         only_save_plots = True,
-        tensorboard_writer = writer if vae_cfg['use_tensorboard'] else None,
+        tensorboard_writer = SummaryWriter(os.path.join('VAE', f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}')) if vae_cfg['use_tensorboard'] else None,
     )
 
     # Generate PSNR table

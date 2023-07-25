@@ -386,11 +386,6 @@ class VAE(object):
             print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change} change)")
             train_losses.append(_train_loss)
 
-            if tensorboard_writer:
-                tensorboard_writer.add_scalar('train_kl', _train_kl.item(), epoch)
-                tensorboard_writer.add_scalar('train_mse', _train_mse.item(), epoch)
-                tensorboard_writer.add_scalar('train_total', _train_loss.item(), epoch)
-
             # Test
             _valid_loss, _valid_kl, _valid_mse = self.test_epoch(data_loader)
             change = self.calculate_change(_valid_loss, valid_losses)
@@ -398,9 +393,15 @@ class VAE(object):
             valid_losses.append(_valid_loss)
 
             if tensorboard_writer:
-                tensorboard_writer.add_scalar('valid_kl', _valid_kl.item(), epoch)
-                tensorboard_writer.add_scalar('valid_mse', _valid_mse.item(), epoch)
-                tensorboard_writer.add_scalar('valid_total', _valid_loss.item(), epoch)
+                # KL
+                tensorboard_writer.add_scalar('loss_kl/train', _train_kl.item(), epoch)
+                tensorboard_writer.add_scalar('loss_kl/valid', _valid_kl.item(), epoch)
+                # MSE
+                tensorboard_writer.add_scalar('loss_mse/train', _train_mse.item(), epoch)
+                tensorboard_writer.add_scalar('loss_mse/valid', _valid_mse.item(), epoch)
+                # Total
+                tensorboard_writer.add_scalar('loss_total/train', _train_loss.item(), epoch)
+                tensorboard_writer.add_scalar('loss_total/valid', _valid_loss.item(), epoch)
 
             if epoch == 0:
                 # No plots for the first epoch
