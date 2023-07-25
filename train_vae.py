@@ -64,7 +64,7 @@ if __name__ == '__main__':
     train_loss, val_loss = vae.train_valid(
         epochs = vae_cfg['epochs'],
         data_loader = data_loader,
-        checkpoints = False,
+        checkpoints = True,
         only_save_plots = True,
         tensorboard_writer = SummaryWriter(os.path.join('VAE', f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}')) if vae_cfg['use_tensorboard'] else None,
     )
