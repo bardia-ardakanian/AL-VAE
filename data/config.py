@@ -45,21 +45,18 @@ coco = {
 
 # VAE configurations
 vae_cfg = {
-    'has_skip': True,           # Whether to use Skip Connections for the VAE
-    'use_cuda': False,          # Whether to use Cuda or run on CPU
-    'latent_dim': 32,           # Latent dimentions in which to save Mu and Sigma
+    'use_cuda': True,           # Whether to use Cuda or run on CPU
+    'latent_dim': 128,          # Latent dimentions in which to save Mu and Sigma
     'kl_alpha': 50,             # Kullback-Leibler divergence coefficient
-    'learning_rate': 1e-3,      # Optimizer learning rate
+    'learning_rate': 1e-4,      # Optimizer learning rate
     'weight_decay': 1e-5,       # Optimizer weight decay
-    'batch_size': 16,           # Batch size
-    'max_iter': 50000,          # Maximum number of iterations (despite batch_size and epochs)
-    'epochs': 300,              # Number of epochs to train on
+    'batch_size': 32,           # Batch size
+    'shuffle': True,            # Whether to shuffle images
+    'iterations': 50000,        # Maximum number of iterations (despite batch_size and epochs)
+    'epochs': 1000,             # Number of epochs to train on
     'image_size': 300,          # Width and height of each image
     'num_images': 1000,         # Number of images to select from both training and testing
-    'use_xavier': False,        # Whether or not to use xavier weight initialization
     'max_norm_gc': 5,           # Gradient Clipping max_norm
     'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
-    'detector_loss_coef': 1,    # Detector loss coefficient when adding the VAE's
-    'use_cv': True,             # Whether to use OpenCV or Torchvision to read images
-    'use_tensorboard': True     # Whether to use Tensorboard to plot losses
+    'use_tb': True,             # Whether to use Tensorboard to plot losses
 }

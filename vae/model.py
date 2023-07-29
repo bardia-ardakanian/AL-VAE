@@ -3,14 +3,13 @@ import torch
 from torch import nn
 from torch import Tensor
 import torch.optim as optim
-import torch.nn.init as init
 import torch.nn.functional as F
-from typing import Tuple, Optional, List
 from torch.utils.data import DataLoader
+from typing import Tuple, Optional, List
 from torch.utils.tensorboard import SummaryWriter
 
 # Third-party imports
-from vae.utils import plot_random_reconstructions, plot_reconstruction
+from vae.utils import plot_random_reconstructions, plot_reconstruction, generate_psnr_table
 
 
 class VAECore(nn.Module):
@@ -18,8 +17,6 @@ class VAECore(nn.Module):
     def __init__(self,
                  latent_dim: int,
                  use_cuda: bool,
-                 has_skip: bool,
-                 use_xavier: bool,
                  leaky_relu_ns: float,
                 ) -> 'VAECore':
         """
@@ -28,12 +25,10 @@ class VAECore(nn.Module):
             Parameters:
                 latent_dim (int): Latent sapece dimentionality
                 use_cuda (bool): Wether to use Conda for Normal sampling
-                has_skip (bool): Wether to use skip connections on the network
         """
         super(VAECore, self).__init__()
         self.device = torch.device("cuda") if use_cuda else torch.device("cpu")
         self.latent_dim = latent_dim
-        self.has_skip = has_skip
 
         # Normal distribution sampling
         self.N = torch.distributions.Normal(0, 1)
@@ -56,12 +51,12 @@ class VAECore(nn.Module):
             nn.BatchNorm2d(32),
             nn.LeakyReLU(leaky_relu_ns, False),
             # Convolution layer 4
-            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=0),
             nn.LeakyReLU(leaky_relu_ns, False),
         )
         self.encoder_2 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(16384, 64 * 16 * 16),
+            nn.Linear(14400, 64 * 16 * 16),
             nn.LeakyReLU(leaky_relu_ns, False),
         )
 
@@ -80,9 +75,7 @@ class VAECore(nn.Module):
         )
         self.decoder_2 = nn.Sequential(
             # Convolution layer 1
-            nn.ConvTranspose2d(128, 32, kernel_size=5, stride=2, padding=0) \
-                if has_skip else \
-                nn.ConvTranspose2d(64, 32, kernel_size=5, stride=2, padding=0),
+            nn.ConvTranspose2d(64, 32, kernel_size=5, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(leaky_relu_ns, True),
             # Convolution layer 2
@@ -97,19 +90,20 @@ class VAECore(nn.Module):
             nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=0),
         )
 
-        # Initialize weights using Xavier initialization
-        if use_xavier:
-            self.encoder_1.apply(self.init_weights)
-            self.encoder_2.apply(self.init_weights)
-            self.mean_layer.apply(self.init_weights)
-            self.logvar_layer.apply(self.init_weights)
-            self.decoder_1.apply(self.init_weights)
-            self.decoder_2.apply(self.init_weights)
 
+    def reparameterize(self, mean: Tensor, logvar: Tensor) -> Tensor:
+        """
+            Reparameterize for inference
 
-    def init_weights(self, m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-            init.xavier_uniform_(m.weight)  # Uniform
+            Parameters:
+                mean (Tensor): Mean Tensor
+                logvar (Tensor): Logvar Tensor
+            Returns:
+                (Tensor): Z tensor
+        """
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std, device=self.device)
+        return eps * std + mean
 
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Tensor]:
@@ -128,12 +122,10 @@ class VAECore(nn.Module):
         mean =  self.mean_layer(x)
         logvar = torch.exp(self.logvar_layer(x))
 
-        if self.has_skip:
-            return mean, logvar, feat    # Return feature as well
         return mean, logvar
 
 
-    def decode(self, x: Tensor, feat: Optional[Tensor] = None) -> Tensor:
+    def decode(self, x: Tensor) -> Tensor:
         """
             Forward pass for the decoder
 
@@ -144,11 +136,6 @@ class VAECore(nn.Module):
         """
         x = self.decoder_1(x)
         x = x.reshape([-1, 64, 16, 16])
-        if self.has_skip:
-            feat = feat[:, :, :16, :16]
-            noise = torch.rand(feat.shape).to(self.device)
-            feat = feat + noise
-            x = torch.cat((x, feat), dim = 1)  # Concat with the feature Tensor
         x = self.decoder_2(x)
         x = torch.sigmoid(x)
         return x
@@ -165,10 +152,7 @@ class VAECore(nn.Module):
             Returns:
                 (Tuple[Tensor, Tensor, Tensor]): Reconstructed image, mean and logvar
         """
-        if self.has_skip:
-            mean, logvar, feat = self.encode(x)
-        else:
-            mean, logvar = self.encode(x)
+        mean, logvar = self.encode(x)
 
         if is_inference:
             # Random sampling (aka. reparameterization)
@@ -177,8 +161,6 @@ class VAECore(nn.Module):
             # Gaussain sampling
             z = mean + logvar * self.N.sample(mean.shape)
 
-        if self.has_skip:
-            return self.decode(z, feat), mean, logvar
         return self.decode(z), mean, logvar
 
 
@@ -191,8 +173,6 @@ class VAE(object):
                  learning_rate: float = 1e-3,
                  kl_alpha: float = 0.1,
                  use_cuda: bool = False,
-                 has_skip: bool = False,
-                 use_xavier: bool = False,
                  max_norm_gc: int = 5,
                  leaky_relu_ns: float = 0.01,
                  ) -> 'VAE':
@@ -205,7 +185,6 @@ class VAE(object):
                 learning_rate (float): Learning rate
                 kl_alpha (float): Kullback-Leibler divergence coefficient
                 use_cuda (bool): Wether to use Conda for Normal sampling
-                has_skip (bool): Wether to use skip connections for the VAE
         """
         self.kl_alpha = kl_alpha
         self.max_norm_gc = max_norm_gc
@@ -215,8 +194,6 @@ class VAE(object):
         self.model = VAECore(
             latent_dim=latent_dim,
             use_cuda=use_cuda,
-            has_skip=has_skip,
-            use_xavier=use_xavier,
             leaky_relu_ns=leaky_relu_ns,
         )
         self.model.to(self.device)
@@ -227,7 +204,6 @@ class VAE(object):
             lr = learning_rate,
             weight_decay = weight_decay
         )
-
 
     def get_loss(self, x: Tensor, x_hat: Tensor, mean: Tensor, logvar: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         """
@@ -319,9 +295,7 @@ class VAE(object):
 
         for _, x in enumerate(dataloader):
             # Load tensor to device
-            import torchvision.transforms.functional as TF
             x = x[0].to(self.device)
-            # x = x.to(self.device)
             # Train and calculate comulicative loss
             _loss, _kl, _mse = self.train_batch(x, extra_loss)
             loss += _loss
@@ -365,13 +339,19 @@ class VAE(object):
                 mse / len(dataloader.dataset),
 
 
-    def train_valid(self, epochs: int, data_loader: Optional[DataLoader] = None, checkpoints: bool = False, only_save_plots: bool = True, tensorboard_writer: SummaryWriter = None) -> Tuple[list, list]:
+    def train_valid(self,
+                    epochs: int,
+                    data_loader: Optional[DataLoader] = None,
+                    only_save_plots: bool = True,
+                    tb_writer: SummaryWriter = None
+                    ) -> Tuple[list, list]:
         """
             Trains and evaluates the model
 
             Parameters:
                 epochs (int): Number of epochs to train on
                 data_loader (DataLoader): The dataloader used for training and validation
+                tb_writer (SummaryWriter): Tensorboard writer
             Returns:
                 (List[list, list]): List of training and validation losses
         """
@@ -383,53 +363,46 @@ class VAE(object):
             # Train
             _train_loss, _train_kl, _train_mse = self.train_epoch(data_loader)
             change = self.calculate_change(_train_loss, train_losses)
-            print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change} change)")
+            print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change})")
             train_losses.append(_train_loss)
 
             # Test
             _valid_loss, _valid_kl, _valid_mse = self.test_epoch(data_loader)
             change = self.calculate_change(_valid_loss, valid_losses)
-            print(f"KL: {round(_valid_kl.item(), 1)}\tMSE: {round(_valid_mse.item(), 1)}\tTotal: {round(_valid_loss.item(), 1)} ({change} change)")
+            print(f"KL: {round(_valid_kl.item(), 1)}\tMSE: {round(_valid_mse.item(), 1)}\tTotal: {round(_valid_loss.item(), 1)} ({change})")
             valid_losses.append(_valid_loss)
 
-            if tensorboard_writer:
+            if tb_writer:
                 # KL
-                tensorboard_writer.add_scalar('loss_kl/train', _train_kl.item(), epoch)
-                tensorboard_writer.add_scalar('loss_kl/valid', _valid_kl.item(), epoch)
+                tb_writer.add_scalar('loss_kl/train', _train_kl.item(), epoch)
+                tb_writer.add_scalar('loss_kl/valid', _valid_kl.item(), epoch)
                 # MSE
-                tensorboard_writer.add_scalar('loss_mse/train', _train_mse.item(), epoch)
-                tensorboard_writer.add_scalar('loss_mse/valid', _valid_mse.item(), epoch)
+                tb_writer.add_scalar('loss_mse/train', _train_mse.item(), epoch)
+                tb_writer.add_scalar('loss_mse/valid', _valid_mse.item(), epoch)
                 # Total
-                tensorboard_writer.add_scalar('loss_total/train', _train_loss.item(), epoch)
-                tensorboard_writer.add_scalar('loss_total/valid', _valid_loss.item(), epoch)
+                tb_writer.add_scalar('loss_total/train', _train_loss.item(), epoch)
+                tb_writer.add_scalar('loss_total/valid', _valid_loss.item(), epoch)
 
-            if epoch == 0:
-                # No plots for the first epoch
-                continue
-
-            # Plot reconstruction of training data
-            if epoch % 10 == 0:
+            if epoch % 100 == 0:
+                # Plot random reconstruction of validation data
                 plot_reconstruction(
                     vae = self,
                     dataset = data_loader.dataset,
                     n = 7,
                     device = self.device,
-                    filename = f"results/vae/recon_{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/recon_{epoch}.jpg" if only_save_plots else None
                 )
-            if epoch % 20 == 0:
-                # Plot random reconstruction of validation data
                 plot_random_reconstructions(
                     vae = self,
                     dataset = data_loader.dataset,
                     n = 3,
                     times = 5,
                     device = self.device,
-                    filename = f"results/vae/recon_{epoch}_random.jpg" if only_save_plots else None
+                    filename = f"vae/images/recon_{epoch}_random.jpg" if only_save_plots else None
                 )
-
-            # Checkpoint
-            if checkpoints and epoch % 10 == 0:
-                self.save_weights(f'weights/vae_epoch_{epoch}.pth')
+            if epoch % 200 == 0:
+                # Save current weights
+                self.save_weights(f'vae/weights/epoch_{epoch}.pth')
 
         return train_losses, valid_losses
 
@@ -447,6 +420,19 @@ class VAE(object):
             obj = self.model.state_dict(),
             f = filename
         )
+
+
+    def load_weights(self, filename: str) -> None:
+        """
+            Loads pretrained weights of the model
+
+            Parameters:
+                filename (str): The name and path for which to save the weights
+            Returns:
+                None
+        """
+        weights = torch.load(filename)
+        self.model.load_state_dict(weights)
 
 
     def calculate_change(self, value: float, history: List[float]) -> str:
