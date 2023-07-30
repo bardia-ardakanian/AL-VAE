@@ -46,7 +46,7 @@ coco = {
 # VAE configurations
 vae_cfg = {
     'use_cuda': True,           # Whether to use Cuda or run on CPU
-    'latent_dim': 128,          # Latent dimentions in which to save Mu and Sigma
+    'latent_dim': 1024,         # Latent dimentions in which to save Mu and Sigma
     'kl_alpha': 50,             # Kullback-Leibler divergence coefficient
     'learning_rate': 1e-4,      # Optimizer learning rate
     'weight_decay': 1e-5,       # Optimizer weight decay

@@ -19,6 +19,7 @@ if __name__ == '__main__':
     os.makedirs('vae/images', exist_ok = True)
     os.makedirs('vae/weights', exist_ok = True)
     os.makedirs('vae/tensorboard', exist_ok = True)
+    os.makedirs('vae/psnrs', exist_ok = True)
 
     # Load VAE configuarions
     use_cuda        = vae_cfg['use_cuda']
@@ -68,7 +69,8 @@ if __name__ == '__main__':
     )
 
     # Load from checkpoint
-    # vae.load_weights("")
+    resume_from = 0
+    vae.load_weights(f"vae/weights/epoch_{resume_from}.path")
 
     # Train
     train_loss, val_loss = vae.train_valid(
@@ -76,6 +78,7 @@ if __name__ == '__main__':
         data_loader = data_loader,
         only_save_plots = True,
         tb_writer = tb_writer,
+        resume_from = resume_from,
     )
 
     # Save PSNR variations table

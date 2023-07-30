@@ -343,7 +343,8 @@ class VAE(object):
                     epochs: int,
                     data_loader: Optional[DataLoader] = None,
                     only_save_plots: bool = True,
-                    tb_writer: SummaryWriter = None
+                    tb_writer: SummaryWriter = None,
+                    resume_from: int = 0,
                     ) -> Tuple[list, list]:
         """
             Trains and evaluates the model
@@ -358,7 +359,7 @@ class VAE(object):
         train_losses = []
         valid_losses = []
 
-        for epoch in range(epochs):
+        for epoch in range(resume_from, resume_from + epochs + 1):
             print(f"\nEPOCH {epoch})")
             # Train
             _train_loss, _train_kl, _train_mse = self.train_epoch(data_loader)
@@ -382,6 +383,9 @@ class VAE(object):
                 # Total
                 tb_writer.add_scalar('loss_total/train', _train_loss.item(), epoch)
                 tb_writer.add_scalar('loss_total/valid', _valid_loss.item(), epoch)
+
+            if epoch == 0:
+                continue
 
             if epoch % 100 == 0:
                 # Plot random reconstruction of validation data
