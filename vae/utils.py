@@ -17,6 +17,10 @@ def calculate_psnr(image1: np.array, image2: np.array):
         Returns:
             (float) the PSNR score
     """
+    if isinstance(image1, torch.Tensor):
+        image1 = image1.cpu()
+    if isinstance(image2, torch.Tensor):
+        image2 = image2.cpu()
     image1 = np.array(image1)
     image2 = np.array(image2)
     # Calculate the mean squared error (MSE)
