@@ -345,7 +345,8 @@ class VAE(object):
                     only_save_plots: bool = True,
                     tb_writer: SummaryWriter = None,
                     resume_from: int = 0,
-                    ) -> Tuple[list, list]:
+                    identifier: str = None,
+                    ) -> None:
         """
             Trains and evaluates the model
 
@@ -354,61 +355,52 @@ class VAE(object):
                 data_loader (DataLoader): The dataloader used for training and validation
                 tb_writer (SummaryWriter): Tensorboard writer
             Returns:
-                (List[list, list]): List of training and validation losses
+                None
         """
-        train_losses = []
-        valid_losses = []
-
         for epoch in range(resume_from, resume_from + epochs + 1):
             print(f"\nEPOCH {epoch})")
             # Train
             _train_loss, _train_kl, _train_mse = self.train_epoch(data_loader)
-            change = self.calculate_change(_train_loss, train_losses)
-            print(f"KL: {round(_train_kl.item(), 1)}\tMSE: {round(_train_mse.item(), 1)}\tTotal: {round(_train_loss.item(), 1)} ({change})")
-            train_losses.append(_train_loss)
+            print(f"KL: {round(_train_kl.item(), 1)}", end = "\t")
+            print(f"MSE: {round(_train_mse.item(), 1)}", end = "\t")
+            print(f"Total: {round(_train_loss.item(), 1)}", end = "\n")
 
-            # Test
+            # Validate
             _valid_loss, _valid_kl, _valid_mse = self.test_epoch(data_loader)
-            change = self.calculate_change(_valid_loss, valid_losses)
-            print(f"KL: {round(_valid_kl.item(), 1)}\tMSE: {round(_valid_mse.item(), 1)}\tTotal: {round(_valid_loss.item(), 1)} ({change})")
-            valid_losses.append(_valid_loss)
+            print(f"KL: {round(_valid_kl.item(), 1)}", end = "\t")
+            print(f"MSE: {round(_valid_mse.item(), 1)}", end = "\t")
+            print(f"Total: {round(_valid_loss.item(), 1)}", end = "\n")
 
             if tb_writer:
-                # KL
-                tb_writer.add_scalar('loss_kl/train', _train_kl.item(), epoch)
-                tb_writer.add_scalar('loss_kl/valid', _valid_kl.item(), epoch)
-                # MSE
-                tb_writer.add_scalar('loss_mse/train', _train_mse.item(), epoch)
-                tb_writer.add_scalar('loss_mse/valid', _valid_mse.item(), epoch)
-                # Total
-                tb_writer.add_scalar('loss_total/train', _train_loss.item(), epoch)
-                tb_writer.add_scalar('loss_total/valid', _valid_loss.item(), epoch)
-
-            if epoch == 0:
-                continue
+                for name, metric in [
+                    # KL
+                    ('loss_kl/train', _train_kl),
+                    ('loss_kl/valid', _valid_kl),
+                    # MSE
+                    ('loss_mse/train', _train_mse),
+                    ('loss_mse/train', _valid_mse),
+                    # Total
+                    ('loss_total/train', _train_loss),
+                    ('loss_total/train', _valid_loss),
+                ]: tb_writer.add_scalar(name, metric.item(), epoch)
 
             if epoch % 100 == 0:
                 # Plot random reconstruction of validation data
                 plot_reconstruction(
                     vae = self,
                     dataset = data_loader.dataset,
-                    n = 7,
                     device = self.device,
-                    filename = f"vae/images/recon_{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/recons/{epoch}.jpg" if only_save_plots else None
                 )
                 plot_random_reconstructions(
                     vae = self,
                     dataset = data_loader.dataset,
-                    n = 3,
-                    times = 5,
                     device = self.device,
-                    filename = f"vae/images/recon_{epoch}_random.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/random_recons/{epoch}.jpg" if only_save_plots else None
                 )
             if epoch % 200 == 0:
                 # Save current weights
-                self.save_weights(f'vae/weights/epoch_{epoch}.pth')
-
-        return train_losses, valid_losses
+                self.save_weights(f'vae/weights/{identifier}/epoch_{epoch}.pth')
 
 
     def save_weights(self, filename: str) -> None:
@@ -437,23 +429,6 @@ class VAE(object):
         """
         weights = torch.load(filename)
         self.model.load_state_dict(weights)
-
-
-    def calculate_change(self, value: float, history: List[float]) -> str:
-        """ 
-            Calculates change of a value as percentage
-
-            Parameters:
-                value (float): New value
-                history (List[float]) Historical values
-            Return:
-                (str): Percentage of change with sign
-        """
-        if len(history) == 0:
-            return 0
-        else:
-            change = (value - history[-1]) / history[-1] * 100
-            return f"{round(change.item(), 1)}%"
 
 
     def set_trainable(self):

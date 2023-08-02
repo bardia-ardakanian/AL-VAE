@@ -33,9 +33,10 @@ if __name__ == '__main__':
     image_size      = vae_cfg['image_size']
     weight_decay    = vae_cfg['weight_decay']
     max_norm_gc     = vae_cfg['max_norm_gc']
+    leaky_relu_ns   = vae_cfg['leaky_relu_ns']
     device          = torch.device('cuda') if use_cuda else torch.device('cpu')
     num_workers     = 2 if use_cuda else 4
-    identifier      = f"ld{latent_dim}_bs{batch_size}_kl{kl_alpha}_lr{learning_rate}"
+    identifier      = f"ld{latent_dim}_bs{batch_size}_kl{kl_alpha}_lr{learning_rate}"   # Must be unique
 
     # Initalize Tensorboard
     tb_writer = None
@@ -66,6 +67,7 @@ if __name__ == '__main__':
         kl_alpha = kl_alpha,
         use_cuda = use_cuda,
         max_norm_gc = max_norm_gc,
+        leaky_relu_ns = leaky_relu_ns,
     )
 
     # Load from checkpoint
@@ -79,6 +81,7 @@ if __name__ == '__main__':
         only_save_plots = True,
         tb_writer = tb_writer,
         resume_from = resume_from,
+        identifier = identifier,
     )
 
     # Save PSNR variations table

@@ -32,7 +32,7 @@ def calculate_psnr(image1: np.array, image2: np.array):
     return psnr
 
 
-def plot_reconstruction(vae, dataset: Dataset, n: int = 5, device: torch.device = torch.device("cpu"), filename: str = None) -> None:
+def plot_reconstruction(vae, dataset: Dataset, n: int = 7, device: torch.device = torch.device("cpu"), filename: str = None) -> None:
     """
         Plot the original and reconstructed images
 
@@ -77,7 +77,7 @@ def plot_reconstruction(vae, dataset: Dataset, n: int = 5, device: torch.device 
         plt.show()
 
 
-def plot_random_reconstructions(vae, dataset: Dataset, n: int = 5, times: int = 5, device: torch.device = torch.device("cpu"), filename: str = None) -> None:
+def plot_random_reconstructions(vae, dataset: Dataset, n: int = 3, times: int = 5, device: torch.device = torch.device("cpu"), filename: str = None) -> None:
     """
         Plot the original and randomly reconstructed images
 
