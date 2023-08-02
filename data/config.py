@@ -52,10 +52,17 @@ vae_cfg = {
     'weight_decay': 1e-5,       # Optimizer weight decay
     'batch_size': 32,           # Batch size
     'shuffle': True,            # Whether to shuffle images
-    'epochs': 1000,             # Number of epochs to train on
+    'epochs': 2000,             # Number of epochs to train on
     'image_size': 300,          # Width and height of each image
-    'num_images': 1000,         # Number of images to select from both training and testing
     'max_norm_gc': 5,           # Gradient Clipping max_norm
-    'leaky_relu_ns': 0.01,      # LeakyReLU negative slope
+    'leaky_relu_ns': 0.2,       # LeakyReLU negative slope
+    'use_tb': True,             # Whether to use Tensorboard to plot losses
+}
+
+# VAE & SSD configurations
+vae_ssd_cfg = {
+    'use_cuda': True,           # Whether to use Cuda or run on CPU
+    'iterations': 50000,        # Number of iterations
+    'ssd_loss_coef': 1,         # SSD loss coefficient when adding to VAEs
     'use_tb': True,             # Whether to use Tensorboard to plot losses
 }

@@ -341,7 +341,8 @@ class VAE(object):
 
     def train_valid(self,
                     epochs: int,
-                    data_loader: Optional[DataLoader] = None,
+                    train_data_loader: Optional[DataLoader] = None,
+                    valid_data_loader: Optional[DataLoader] = None,
                     only_save_plots: bool = True,
                     tb_writer: SummaryWriter = None,
                     resume_from: int = 0,
@@ -352,7 +353,8 @@ class VAE(object):
 
             Parameters:
                 epochs (int): Number of epochs to train on
-                data_loader (DataLoader): The dataloader used for training and validation
+                train_data_loader (DataLoader): The dataloader used for training
+                valid_data_loader (DataLoader): The dataloader used for validation
                 tb_writer (SummaryWriter): Tensorboard writer
             Returns:
                 None
@@ -360,13 +362,13 @@ class VAE(object):
         for epoch in range(resume_from, resume_from + epochs + 1):
             print(f"\nEPOCH {epoch})")
             # Train
-            _train_loss, _train_kl, _train_mse = self.train_epoch(data_loader)
+            _train_loss, _train_kl, _train_mse = self.train_epoch(train_data_loader)
             print(f"KL: {round(_train_kl.item(), 1)}", end = "\t")
             print(f"MSE: {round(_train_mse.item(), 1)}", end = "\t")
             print(f"Total: {round(_train_loss.item(), 1)}", end = "\n")
 
             # Validate
-            _valid_loss, _valid_kl, _valid_mse = self.test_epoch(data_loader)
+            _valid_loss, _valid_kl, _valid_mse = self.test_epoch(valid_data_loader)
             print(f"KL: {round(_valid_kl.item(), 1)}", end = "\t")
             print(f"MSE: {round(_valid_mse.item(), 1)}", end = "\t")
             print(f"Total: {round(_valid_loss.item(), 1)}", end = "\n")
@@ -385,18 +387,33 @@ class VAE(object):
                 ]: tb_writer.add_scalar(name, metric.item(), epoch)
 
             if epoch % 100 == 0:
-                # Plot random reconstruction of validation data
+                # Training data Reconstruction
                 plot_reconstruction(
                     vae = self,
-                    dataset = data_loader.dataset,
+                    dataset = train_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/train_recons/{epoch}.jpg" if only_save_plots else None
                 )
+                # Validation data Reconstruction
+                plot_reconstruction(
+                    vae = self,
+                    dataset = valid_data_loader.dataset,
+                    device = self.device,
+                    filename = f"vae/images/{identifier}/valid_recons/{epoch}.jpg" if only_save_plots else None
+                )
+                # Random Training data Reconstruction
                 plot_random_reconstructions(
                     vae = self,
-                    dataset = data_loader.dataset,
+                    dataset = train_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/random_recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/random_train_recons/{epoch}.jpg" if only_save_plots else None
+                )
+                # Random Validation data Reconstruction
+                plot_random_reconstructions(
+                    vae = self,
+                    dataset = valid_data_loader.dataset,
+                    device = self.device,
+                    filename = f"vae/images/{identifier}/random_valid_recons/{epoch}.jpg" if only_save_plots else None
                 )
             if epoch % 200 == 0:
                 # Save current weights

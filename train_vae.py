@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     # Load from checkpoint
     resume_from = 0
-    # vae.load_weights(f"vae/weights/epoch_{resume_from}.path")
+    # vae.load_weights(f"vae/weights/epoch_{resume_from}.pth")
 
     # Train
     train_loss, val_loss = vae.train_valid(
