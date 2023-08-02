@@ -101,14 +101,14 @@ if __name__ == '__main__':
     ssd.eval()  # Set for evaluation
 
     # create batch iterator
-    batch_iterator = iter(data_loader)
+    batch_iterator = iter(j1_loader)
     for iteration in range(iterations):
 
         # load train data
         try:
             images, targets = next(batch_iterator)
         except:
-            batch_iterator = iter(data_loader)
+            batch_iterator = iter(j1_loader)
             images, targets = next(batch_iterator)
 
         if use_cuda:
@@ -154,16 +154,29 @@ if __name__ == '__main__':
         # Training data Reconstruction
         plot_reconstruction(
             vae = vae,
-            dataset = data_loader.dataset,
+            dataset = j1_loader.dataset,    # Seen dataset
             device = device,
             filename = f"vae/images/{identifier}/train_recons/iter_{iteration}.jpg"
+        )
+        # Validation data Reconstruction
+        plot_reconstruction(
+            vae = vae,
+            dataset = j2_loader.dataset,    # Unseen dataset
+            device = device,
+            filename = f"vae/images/{identifier}/valid_recons/epoch_{iteration}.jpg"
         )
         # Random Training data Reconstruction
         plot_random_reconstructions(
             vae = vae,
-            dataset = data_loader.dataset,
+            dataset = j1_loader.dataset,    # Unseen dataset
             device = device,
             filename = f"vae/images/{identifier}/random_train_recons/iter_{iteration}.jpg"
+        )
+        plot_random_reconstructions(
+            vae = vae,
+            dataset = j2_loader.dataset,    # Unseen dataset
+            device = device,
+            filename = f"vae/images/{identifier}/random_valid_recons/epoch_{iteration}.jpg"
         )
 
         # Checkpoint

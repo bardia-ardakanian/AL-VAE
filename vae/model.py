@@ -389,28 +389,28 @@ class VAE(object):
                 # Training data Reconstruction
                 plot_reconstruction(
                     vae = self,
-                    dataset = train_data_loader.dataset,
+                    dataset = train_data_loader.dataset,    # Seen dataset
                     device = self.device,
                     filename = f"vae/images/{identifier}/train_recons/epoch_{epoch}.jpg"
                 )
                 # Validation data Reconstruction
                 plot_reconstruction(
                     vae = self,
-                    dataset = valid_data_loader.dataset,
+                    dataset = valid_data_loader.dataset,    # Unseen dataset
                     device = self.device,
                     filename = f"vae/images/{identifier}/valid_recons/epoch_{epoch}.jpg"
                 )
                 # Random Training data Reconstruction
                 plot_random_reconstructions(
                     vae = self,
-                    dataset = train_data_loader.dataset,
+                    dataset = train_data_loader.dataset,    # Seen dataset
                     device = self.device,
                     filename = f"vae/images/{identifier}/random_train_recons/epoch_{epoch}.jpg"
                 )
                 # Random Validation data Reconstruction
                 plot_random_reconstructions(
                     vae = self,
-                    dataset = valid_data_loader.dataset,
+                    dataset = valid_data_loader.dataset,    # Unseen dataset
                     device = self.device,
                     filename = f"vae/images/{identifier}/random_valid_recons/epoch_{epoch}.jpg"
                 )
