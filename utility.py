@@ -1,23 +1,41 @@
+from typing import Union, Tuple
 from data import *
 from utils.augmentations import SSDAugmentation, VAEAugmentation
 import torch.utils.data as data
 import matplotlib.pyplot as plt
 
 
-def exclude_sample_split(dataset_root, transform):
-    # exclude dataset
-    exclude_dataset = VOCDetection(root=dataset_root, transform=transform, exclude_set=True)
-    # exclude dataloader
-    exclude_loader = data.DataLoader(exclude_dataset, 2, num_workers=2, shuffle=True,
-                                     collate_fn=detection_collate, pin_memory=True)
+def exclude_sample_split(
+        root: str,
+        transform: Union[VAEAugmentation, SSDAugmentation],
+        batch_size: int,
+        is_vae: bool = False,
+        num_workers: int = 2,
+        shuffle: bool = True,
+    ) -> Tuple[data.DataLoader, data.DataLoader]:
 
-    # sample dataset
-    sample_dataset = VOCDetection(root=dataset_root, transform=transform, sample_set=True)
-    # sample dataloader
-    sample_loader = data.DataLoader(sample_dataset, 2, num_workers=2, shuffle=True,
-                                    collate_fn=detection_collate, pin_memory=True)
+    def _(is_j1: bool):
+        """ Wrapper """
+        dataset = VOCDetection(
+            root = root,
+            transform = transform,
+            sample_set = is_j1,         # J1 Sample
+            exclude_set = not is_j1,    # J2 Sample
+            is_vae = is_vae             # VAE compatible loader
+        )
+        loader = data.DataLoader(
+            dataset = dataset,
+            batch_size = batch_size,
+            num_workers = num_workers,
+            shuffle = shuffle,
+            collate_fn = detection_collate,
+            pin_memory = True,
+        )
+        return loader
 
-    return exclude_dataset, exclude_loader, sample_dataset, sample_loader
+    j1_loader = _(True)
+    j2_loader = _(False)
+    return j1_loader, j2_loader
 
 
 def plot_image_with_annotations(image, targets, dim=300):

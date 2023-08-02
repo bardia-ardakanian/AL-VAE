@@ -5,6 +5,7 @@ from data import *
 import torch.utils.data as data
 from utils.augmentations import VAEAugmentation
 from torch.utils.tensorboard import SummaryWriter
+from utility import exclude_sample_split
 
 # Third-party imports
 from vae.model import VAE
@@ -15,11 +16,6 @@ torch.manual_seed(0)
 
 
 if __name__ == '__main__':
-    # Create dirs if not already exist
-    os.makedirs('vae/images', exist_ok = True)
-    os.makedirs('vae/weights', exist_ok = True)
-    os.makedirs('vae/tensorboard', exist_ok = True)
-    os.makedirs('vae/psnrs', exist_ok = True)
 
     # Load VAE configuarions
     use_cuda        = vae_cfg['use_cuda']
@@ -38,25 +34,25 @@ if __name__ == '__main__':
     num_workers     = 2 if use_cuda else 4
     identifier      = f"ld{latent_dim}_bs{batch_size}_kl{kl_alpha}_lr{learning_rate}"   # Must be unique
 
+    # Create dirs if not already exist
+    os.makedirs(f'vae/images/{identifier}', exist_ok = True)
+    os.makedirs(f'vae/weights/{identifier}', exist_ok = True)
+    os.makedirs(f'vae/tensorboard/{identifier}', exist_ok = True)
+    os.makedirs(f'vae/psnrs/{identifier}', exist_ok = True)
+
     # Initalize Tensorboard
     tb_writer = None
     if use_tb:
         tb_writer = SummaryWriter(f"vae/tensorboard/{identifier}")
 
     # Load data
-    dataset = VOCDetection(
+    j1_loader, j2_loader = exclude_sample_split(
         root = 'data/VOCdevkit',
         transform = VAEAugmentation(image_size),
-        sample_set = True,   # J1 images
-        is_vae = True
-    )
-    data_loader = data.DataLoader(
-        dataset = dataset,
         batch_size = batch_size,
+        is_vae = True,
         num_workers = num_workers,
-        shuffle = shuffle,
-        collate_fn = detection_collate,
-        pin_memory = True,
+        shuffle = shuffle
     )
 
     # Define Model
@@ -77,19 +73,23 @@ if __name__ == '__main__':
     # Train
     train_loss, val_loss = vae.train_valid(
         epochs = epochs,
-        data_loader = data_loader,
-        only_save_plots = True,
+        train_data_loader = j1_loader,
+        valid_data_loader = j2_loader,
         tb_writer = tb_writer,
         resume_from = resume_from,
         identifier = identifier,
     )
 
-    # Save PSNR variations table
+    # Save PSNR variations tables
     generate_psnr_table(
         vae = vae,
-        dataset = data_loader.dataset,
-        n = 100,
-        times = 10,
+        dataset = j1_loader.dataset,
         device = device,
-        filename = f"vae/psnrs/{identifier}.csv"
+        filename = f"vae/psnrs/{identifier}/seen.csv"
+    )
+    generate_psnr_table(
+        vae = vae,
+        dataset = j2_loader.dataset,
+        device = device,
+        filename = f"vae/psnrs/{identifier}/unseen.csv"
     )

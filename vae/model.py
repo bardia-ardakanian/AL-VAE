@@ -343,7 +343,6 @@ class VAE(object):
                     epochs: int,
                     train_data_loader: Optional[DataLoader] = None,
                     valid_data_loader: Optional[DataLoader] = None,
-                    only_save_plots: bool = True,
                     tb_writer: SummaryWriter = None,
                     resume_from: int = 0,
                     identifier: str = None,
@@ -392,28 +391,28 @@ class VAE(object):
                     vae = self,
                     dataset = train_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/train_recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/train_recons/epoch_{epoch}.jpg"
                 )
                 # Validation data Reconstruction
                 plot_reconstruction(
                     vae = self,
                     dataset = valid_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/valid_recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/valid_recons/epoch_{epoch}.jpg"
                 )
                 # Random Training data Reconstruction
                 plot_random_reconstructions(
                     vae = self,
                     dataset = train_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/random_train_recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/random_train_recons/epoch_{epoch}.jpg"
                 )
                 # Random Validation data Reconstruction
                 plot_random_reconstructions(
                     vae = self,
                     dataset = valid_data_loader.dataset,
                     device = self.device,
-                    filename = f"vae/images/{identifier}/random_valid_recons/{epoch}.jpg" if only_save_plots else None
+                    filename = f"vae/images/{identifier}/random_valid_recons/epoch_{epoch}.jpg"
                 )
             if epoch % 200 == 0:
                 # Save current weights

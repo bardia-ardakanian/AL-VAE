@@ -62,6 +62,8 @@ vae_cfg = {
 # VAE & SSD configurations
 vae_ssd_cfg = {
     'use_cuda': True,           # Whether to use Cuda or run on CPU
+    'batch_size': 4,            # Batch size
+    'shuffle': True,            # Whether to shuffle images
     'iterations': 50000,        # Number of iterations
     'ssd_loss_coef': 1,         # SSD loss coefficient when adding to VAEs
     'use_tb': True,             # Whether to use Tensorboard to plot losses

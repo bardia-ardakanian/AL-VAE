@@ -130,7 +130,7 @@ def plot_random_reconstructions(vae, dataset: Dataset, n: int = 3, times: int = 
         plt.show()
 
 
-def generate_psnr_table(vae, dataset: Dataset, n: int = 5, times: int = 5, device: torch.device = torch.device("cpu"), filename: str = None) -> pd.DataFrame:
+def generate_psnr_table(vae, dataset: Dataset, n: int = 100, times: int = 10, device: torch.device = torch.device("cpu"), filename: str = None) -> pd.DataFrame:
     """
         Generates the PSNR table for further analysis
 
