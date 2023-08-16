@@ -104,10 +104,13 @@ class VOCDetection(data.Dataset):
                  image_sets=[('2007', 'trainval')],
                  transform=None, target_transform=VOCAnnotationTransform(),
                  dataset_name='VOC0712',
+                 remaining_set=False,  # Remaining of Original Dataset - Mix Set
+                 mix_set=False,  # Mix Set: 100% of Sample Set + a proportion of Exclude Set # J3
                  exclude_set=False,  # Exclude Set: Original Dataset - Sample set  # J2
                  sample_set=False,  # Sample Set: Random Images  # J1
-                 sample_size=1000,
-                 seed=137,
+                 sample_size=1000,  # Sample Set Size
+                 exclude_size=1000,  # Exclude Set proportion in Mixed Set
+                 sample_seed=137,  # sampler seed
                  is_vae: bool = False,
                  ):
         self.root = root
@@ -124,20 +127,35 @@ class VOCDetection(data.Dataset):
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
 
-        if exclude_set or sample_set:
+        if remaining_set or mix_set or exclude_set or sample_set:
             # Set the seed for reproducibility
-            random.seed(seed)
+            random.seed(sample_seed)
+
+            print(f'Original Database size: [{len(self.ids)}]')
 
             # Randomly select 1000 IDs
             sample_ids = random.sample(self.ids, sample_size)
+            exclude_ids = [item for item in self.ids if item not in sample_ids]
+
+            if remaining_set:
+                # Exclude the mxi data from original dataset
+                self.ids = exclude_ids[exclude_size:]
+                print(f'Remaining Database size: [{len(self.ids)}]')
+
+            if mix_set:
+                # Mix the sample_set and exclude_set
+                self.ids = sample_ids + exclude_ids[:exclude_size]
+                print(f'Mix Database size: [{len(self.ids)}]')
 
             if exclude_set:
                 # Exclude the sampled data from the original dataset
-                self.ids = [item for item in self.ids if item not in sample_ids]
+                self.ids = exclude_ids
+                print(f'Exclude Database size: [{len(self.ids)}]')
 
             if sample_set:
                 # Rewrite
                 self.ids = sample_ids
+                print(f'Sample Database size: [{len(self.ids)}]')
 
     def __getitem__(self, index):
         im, gt, h, w = self.pull_item(index)

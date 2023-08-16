@@ -38,6 +38,39 @@ def exclude_sample_split(
     return j1_loader, j2_loader
 
 
+def mix_remaining_split(
+        root: str,
+        transform: Union[VAEAugmentation, SSDAugmentation],
+        batch_size: int,
+        is_vae: bool = False,
+        num_workers: int = 2,
+        shuffle: bool = True,
+    ) -> Tuple[data.DataLoader, data.DataLoader]:
+
+    def _(is_mix: bool):
+        """ Wrapper """
+        dataset = VOCDetection(
+            root = root,
+            transform = transform,
+            remaining_set = not is_mix,  # remaining Sample
+            mix_set = is_mix,            # J3 Sample
+            is_vae = is_vae              # VAE compatible loader
+        )
+        loader = data.DataLoader(
+            dataset = dataset,
+            batch_size = batch_size,
+            num_workers = num_workers,
+            shuffle = shuffle,
+            collate_fn = detection_collate,
+            pin_memory = True,
+        )
+        return loader
+
+    j3_loader = _(True)
+    remaining_loader = _(False)
+    return j3_loader, remaining_loader
+
+
 def plot_image_with_annotations(image, targets, dim=300):
     # Get the first image and convert it to a NumPy array
     image = image.numpy().transpose((1, 2, 0))

@@ -8,23 +8,29 @@ if __name__ == "__main__":
     dataset_root = VOC_ROOT
     cfg = voc
 
-    exclude_dataset, exclude_loader, sample_dataset, sample_loader = exclude_sample_split(dataset_root=VOC_ROOT, transform=VAEAugmentation())
+    j3_loader, remaining_loader = mix_remaining_split(
+        root = 'data/VOCdevkit',
+        transform = VAEAugmentation(300),
+        batch_size = 1,
+        is_vae = True,
+        num_workers = 2,
+        shuffle = True)
 
-    print(f'''Exclude Dataset Size: {len(exclude_dataset)}\nSample Dataset Size: {len(sample_dataset)}''')
+    print(f'''J3 Dataset Size: {len(j3_loader)}\nRemaining Dataset Size: {len(remaining_loader)}''')
 
     # create batch iterator
-    batch_iterator = iter(sample_loader)
+    batch_iterator = iter(j3_loader)
     for iteration in range(0, cfg['max_iter']):
 
         # load train data
         try:
             images, targets = next(batch_iterator)
         except:
-            batch_iterator = iter(sample_loader)
+            batch_iterator = iter(j3_loader)
             images, targets = next(batch_iterator)
 
         image, target = images[0], targets[0]
 
-        # plot_image_with_annotations(image, target, cfg['min_dim'])
+        plot_image_with_annotations(image, target, cfg['min_dim'])
 
         break
