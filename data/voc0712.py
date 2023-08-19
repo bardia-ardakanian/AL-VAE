@@ -100,8 +100,8 @@ class VOCDetection(data.Dataset):
     """
 
     def __init__(self, root,
-                 # image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
-                 image_sets=[('2007', 'trainval')],
+                 image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
+                #  image_sets=[('2007', 'trainval')],
                  transform=None, target_transform=VOCAnnotationTransform(),
                  dataset_name='VOC0712',
                  remaining_set=False,  # Remaining of Original Dataset - Mix Set
@@ -109,7 +109,7 @@ class VOCDetection(data.Dataset):
                  exclude_set=False,  # Exclude Set: Original Dataset - Sample set  # J2
                  sample_set=False,  # Sample Set: Random Images  # J1
                  sample_size=1000,  # Sample Set Size
-                 exclude_size=1000,  # Exclude Set proportion in Mixed Set
+                 exclude_size=4000,  # Exclude Set proportion in Mixed Set
                  sample_seed=137,  # sampler seed
                  is_vae: bool = False,
                  ):

@@ -5,7 +5,7 @@ from data import *
 import torch.utils.data as data
 from utils.augmentations import VAEAugmentation
 from torch.utils.tensorboard import SummaryWriter
-from utility import exclude_sample_split
+from utility import exclude_sample_split, mix_remaining_split
 
 # Third-party imports
 from vae.model import VAE
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         tb_writer = SummaryWriter(f"vae/tensorboard/{identifier}")
 
     # Load data
-    j1_loader, j2_loader = exclude_sample_split(
+    j3_loader, j3_prime_loader = mix_remaining_split(
         root = 'data/VOCdevkit',
         transform = VAEAugmentation(image_size),
         batch_size = batch_size,
@@ -54,6 +54,7 @@ if __name__ == '__main__':
         num_workers = num_workers,
         shuffle = shuffle
     )
+    print(len(j3_loader.dataset), len(j3_prime_loader.dataset))
 
     # Define Model
     vae = VAE(
@@ -73,8 +74,8 @@ if __name__ == '__main__':
     # Train
     train_loss, val_loss = vae.train_valid(
         epochs = epochs,
-        train_data_loader = j1_loader,
-        valid_data_loader = j2_loader,
+        train_data_loader = j3_loader,
+        valid_data_loader = j3_prime_loader,
         tb_writer = tb_writer,
         resume_from = resume_from,
         identifier = identifier,
@@ -83,13 +84,13 @@ if __name__ == '__main__':
     # Save PSNR variations tables
     generate_psnr_table(
         vae = vae,
-        dataset = j1_loader.dataset,
+        dataset = j3_loader.dataset,
         device = device,
         filename = f"vae/psnrs/{identifier}/seen.csv"
     )
     generate_psnr_table(
         vae = vae,
-        dataset = j2_loader.dataset,
+        dataset = j3_loader.dataset,
         device = device,
         filename = f"vae/psnrs/{identifier}/unseen.csv"
     )
